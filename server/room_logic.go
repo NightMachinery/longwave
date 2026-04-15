@@ -516,7 +516,7 @@ func normalizeRoundState(room *RoomState) {
 	if room.ClueQuota < 1 {
 		room.ClueQuota = 1
 	}
-	filteredPsychics := room.PsychicIDs[:0]
+	filteredPsychics := make([]string, 0, len(room.PsychicIDs))
 	for _, psychicID := range room.PsychicIDs {
 		player, ok := room.Players[psychicID]
 		if !ok || player.IsObserver {
@@ -527,7 +527,7 @@ func normalizeRoundState(room *RoomState) {
 		}
 		filteredPsychics = append(filteredPsychics, psychicID)
 	}
-	room.PsychicIDs = append([]string(nil), filteredPsychics...)
+	room.PsychicIDs = filteredPsychics
 	if room.RoundPhase == RoundPhaseGiveClue {
 		needed := room.PsychicCount - len(room.PsychicIDs)
 		if needed > 0 {
@@ -558,6 +558,7 @@ func containsString(values []string, target string) bool {
 }
 
 func sanitizeRoomForViewer(room RoomState, viewerID string) RoomView {
+	normalizeRoomStateShape(&room)
 	view := RoomView{RoomState: room}
 	view.MigrationTokens = nil
 	players := map[string]PlayerState{}

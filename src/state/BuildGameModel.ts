@@ -53,7 +53,10 @@ export function BuildGameModel(
   tSpectrumCards: TFunction<"spectrum-cards">,
   setPlayerName: (newName: string) => void
 ): GameModel {
-  const localPlayerState = gameState.players[gameState.viewer.playerId] || {
+  const players = gameState.players ?? {};
+  const psychicIds = gameState.psychicIds ?? [];
+
+  const localPlayerState = players[gameState.viewer.playerId] || {
     name: "Player",
     team: Team.Unset,
     isModerator: false,
@@ -68,12 +71,12 @@ export function BuildGameModel(
   return {
     gameState,
     localPlayer,
-    psychics: gameState.psychicIds
+    psychics: psychicIds
       .map((id) =>
-        gameState.players[id]
+        players[id]
           ? {
               id,
-              ...gameState.players[id],
+              ...players[id],
             }
           : null
       )

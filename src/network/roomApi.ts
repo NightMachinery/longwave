@@ -1,4 +1,4 @@
-import { GameState, GameType, Team } from "../state/GameState";
+import { GameState, GameType, InitialGameState, Team } from "../state/GameState";
 
 export type RoomAction =
   | { type: "set_name"; name: string }
@@ -109,5 +109,28 @@ export function subscribeToRoom(
 
   return () => {
     eventSource.close();
+  };
+}
+
+
+export function normalizeGameStatePayload(gameState: Partial<GameState>): GameState {
+  const initialState = InitialGameState(gameState.deckLanguage ?? "en");
+  return {
+    ...initialState,
+    ...gameState,
+    players: gameState.players ?? initialState.players,
+    clues: gameState.clues ?? initialState.clues,
+    psychicIds: gameState.psychicIds ?? initialState.psychicIds,
+    previousTurn:
+      gameState.previousTurn == null
+        ? null
+        : {
+            ...gameState.previousTurn,
+            clues: gameState.previousTurn.clues ?? [],
+          },
+    viewer: {
+      ...initialState.viewer,
+      ...gameState.viewer,
+    },
   };
 }

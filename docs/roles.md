@@ -45,7 +45,7 @@ The backend now filters room views per player session:
 
 ## Session and migration model
 
-Room access now uses a room-scoped server session cookie instead of the older `roomAuth` URL-sharing model.
+Room access now uses a room-scoped server session cookie instead of the older `roomAuth` URL-sharing model. The client joins the room before it opens authenticated event streams.
 
 - **Copy room link** shares the clean room URL.
 - **Migrate device** asks the server for a one-time migration link.

@@ -48,8 +48,8 @@ func TestRoomJoinActionFilteringAndEventStream(t *testing.T) {
 	if aliceActionBody.RoundPhase != RoundPhaseGiveClue {
 		t.Fatalf("expected cooperative mode to start clueing, got %v", aliceActionBody.RoundPhase)
 	}
-	if aliceActionBody.SpectrumTarget == 0 {
-		t.Fatalf("expected psychic to see target during clueing")
+	if !aliceActionBody.Viewer.IsCurrentPsychic {
+		t.Fatalf("expected acting player to be marked as the current psychic")
 	}
 
 	bobJoin := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/join", map[string]any{

@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  fetchRoom,
   joinRoom,
+  normalizeGameStatePayload,
   postRoomAction,
   RoomAction,
   subscribeToRoom,
 } from "../../network/roomApi";
-import { GameState, InitialGameState } from "../../state/GameState";
+import { GameState } from "../../state/GameState";
 
 export function useNetworkBackedGameState(args: {
   roomId: string;
@@ -29,6 +29,8 @@ export function useNetworkBackedGameState(args: {
       return;
     }
 
+    let unsubscribe = () => {};
+
     void joinRoom({
       roomId: args.roomId,
       playerName: args.playerName,
@@ -36,43 +38,26 @@ export function useNetworkBackedGameState(args: {
       deckLanguage: i18n.language,
     })
       .then((joinedState) => {
-        if (!isDisposed) {
-          setGameState({
-            ...InitialGameState(i18n.language),
-            ...joinedState,
-          });
+        if (isDisposed) {
+          return;
         }
+
+        setGameState(normalizeGameStatePayload(joinedState));
+
+        unsubscribe = subscribeToRoom(
+          args.roomId,
+          (nextGameState) => {
+            if (!isDisposed) {
+              setGameState(normalizeGameStatePayload(nextGameState));
+            }
+          },
+          (error) => {
+            console.error("Room event stream failed", error);
+          }
+        );
       })
       .catch((error) => {
         console.error("Failed to join room", error);
-      });
-
-    const unsubscribe = subscribeToRoom(
-      args.roomId,
-      (nextGameState) => {
-        if (!isDisposed) {
-          setGameState({
-            ...InitialGameState(i18n.language),
-            ...nextGameState,
-          });
-        }
-      },
-      (error) => {
-        console.error("Room event stream failed", error);
-      }
-    );
-
-    void fetchRoom(args.roomId)
-      .then((nextGameState) => {
-        if (!isDisposed) {
-          setGameState({
-            ...InitialGameState(i18n.language),
-            ...nextGameState,
-          });
-        }
-      })
-      .catch((error) => {
-        console.error("Failed to load room state", error);
       });
 
     return () => {
@@ -86,10 +71,7 @@ export function useNetworkBackedGameState(args: {
     (action: RoomAction) => {
       void postRoomAction(args.roomId, action)
         .then((savedGameState) => {
-          setGameState({
-            ...InitialGameState(i18n.language),
-            ...savedGameState,
-          });
+          setGameState(normalizeGameStatePayload(savedGameState));
         })
         .catch((error) => {
           console.error("Failed to update room state", error);

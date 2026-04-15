@@ -82,12 +82,7 @@ func (store *Store) LoadRoom(ctx context.Context, roomID string, touch bool) (Ro
 	if err := json.Unmarshal([]byte(payload), &room); err != nil {
 		return room, false, fmt.Errorf("decode room %s: %w", roomID, err)
 	}
-	if room.Players == nil {
-		room.Players = map[string]PlayerState{}
-	}
-	if room.MigrationTokens == nil {
-		room.MigrationTokens = map[string]string{}
-	}
+	normalizeRoomStateShape(&room)
 	if touch {
 		if _, err := store.db.ExecContext(ctx, `UPDATE rooms SET updated_at = ? WHERE id = ?`, store.now().Unix(), roomID); err != nil {
 			return room, false, fmt.Errorf("touch room %s: %w", roomID, err)
@@ -117,9 +112,11 @@ func (store *Store) UpdateRoom(ctx context.Context, roomID string, fn func(*Room
 	if !found {
 		room = InitialRoomState("en")
 	}
+	normalizeRoomStateShape(&room)
 	if err := fn(&room, found); err != nil {
 		return RoomState{}, err
 	}
+	normalizeRoomStateShape(&room)
 	if err := store.SaveRoom(ctx, roomID, room); err != nil {
 		return RoomState{}, err
 	}

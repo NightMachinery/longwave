@@ -170,3 +170,22 @@ func sortedEligiblePlayers(playerIDs []string) []string {
 	sort.Strings(result)
 	return result
 }
+
+
+func normalizeRoomStateShape(room *RoomState) {
+	if room.Players == nil {
+		room.Players = map[string]PlayerState{}
+	}
+	if room.Clues == nil {
+		room.Clues = []Clue{}
+	}
+	if room.PsychicIDs == nil {
+		room.PsychicIDs = []string{}
+	}
+	if room.MigrationTokens == nil {
+		room.MigrationTokens = map[string]string{}
+	}
+	if room.PreviousTurn != nil && room.PreviousTurn.Clues == nil {
+		room.PreviousTurn.Clues = []Clue{}
+	}
+}
