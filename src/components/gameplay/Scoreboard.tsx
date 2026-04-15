@@ -126,6 +126,32 @@ function PlayerRow(props: { playerId: string }) {
               })
             }
           />
+          {gameState.gameType === GameType.Teams && !player.isObserver && (
+            <>
+              <Button
+                text="Left team"
+                onClick={() =>
+                  submitAction({
+                    type: "set_team",
+                    playerId: props.playerId,
+                    team: Team.Left,
+                  })
+                }
+                disabled={player.team === Team.Left}
+              />
+              <Button
+                text="Right team"
+                onClick={() =>
+                  submitAction({
+                    type: "set_team",
+                    playerId: props.playerId,
+                    team: Team.Right,
+                  })
+                }
+                disabled={player.team === Team.Right}
+              />
+            </>
+          )}
           <Button
             text={player.isModerator ? "Demote mod" : "Promote mod"}
             onClick={() =>

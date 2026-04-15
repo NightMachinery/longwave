@@ -79,15 +79,34 @@ func applyAction(room *RoomState, viewerID string, action ActionRequest) error {
 		if action.Team == nil {
 			return fmt.Errorf("team is required")
 		}
+		team, err := playableTeam(*action.Team)
+		if err != nil {
+			return err
+		}
 		player := room.Players[viewerID]
 		if player.IsObserver {
 			return fmt.Errorf("observer cannot join a team")
 		}
-		player.Team = Team(*action.Team)
+		player.Team = team
 		room.Players[viewerID] = player
 		return nil
 	case "start_round":
 		return startRound(room, viewerID)
+	case "set_team":
+		if !canManageRoom(room, viewerID) || action.PlayerID == "" || action.Team == nil {
+			return errUnauthorized
+		}
+		team, err := playableTeam(*action.Team)
+		if err != nil {
+			return err
+		}
+		player, ok := room.Players[action.PlayerID]
+		if !ok {
+			return fmt.Errorf("player not found")
+		}
+		player.Team = team
+		room.Players[action.PlayerID] = player
+		return nil
 	case "set_psychic_count":
 		if !canManageRoom(room, viewerID) || action.PsychicCount == nil {
 			return errUnauthorized
@@ -233,6 +252,14 @@ func setPlayerFlag(room *RoomState, viewerID string, targetID string, value *boo
 	}
 	room.Players[targetID] = player
 	return nil
+}
+
+func playableTeam(raw int) (Team, error) {
+	team := Team(raw)
+	if team != TeamLeft && team != TeamRight {
+		return TeamUnset, fmt.Errorf("team must be left or right")
+	}
+	return team, nil
 }
 
 func canManageRoom(room *RoomState, viewerID string) bool {
@@ -386,10 +413,16 @@ func startRound(room *RoomState, viewerID string) error {
 	}
 	if room.GameType == GameTypeTeams {
 		if room.RoundPhase == RoundPhaseSetupGame {
+			if !canManageRoom(room, viewerID) {
+				return errUnauthorized
+			}
 			room.RoundPhase = RoundPhasePickTeams
 			return nil
 		}
 		if room.RoundPhase == RoundPhasePickTeams {
+			if !canManageRoom(room, viewerID) {
+				return errUnauthorized
+			}
 			if player.Team == TeamUnset {
 				return fmt.Errorf("join a team first")
 			}
@@ -620,11 +653,11 @@ func canStartRound(room *RoomState, viewerID string) bool {
 		return false
 	}
 	if room.RoundPhase == RoundPhaseSetupGame {
-		return true
+		return canManageRoom(room, viewerID)
 	}
 	if room.GameType == GameTypeTeams {
 		if room.RoundPhase == RoundPhasePickTeams {
-			return player.Team != TeamUnset
+			return canManageRoom(room, viewerID) && player.Team != TeamUnset
 		}
 		if room.RoundPhase != RoundPhaseViewScore {
 			return false

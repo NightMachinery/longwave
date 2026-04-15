@@ -233,3 +233,86 @@ func decodeBody[T any](t *testing.T, body io.ReadCloser) T {
 func osWriteFile(path string, data []byte) error {
 	return os.WriteFile(path, data, 0o644)
 }
+
+func TestOnlyModeratorsCanStartTeamGameAndAssignTeams(t *testing.T) {
+	t.Parallel()
+
+	testServer := newTestHTTPServer(t)
+	defer testServer.Close()
+
+	aliceJoin := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/join", map[string]any{
+		"playerName": "Alice",
+	})
+	if aliceJoin.StatusCode != http.StatusOK {
+		t.Fatalf("expected alice join to return 200, got %d", aliceJoin.StatusCode)
+	}
+	aliceCookie := aliceJoin.Cookies()[0]
+	_ = decodeBody[RoomView](t, aliceJoin.Body)
+
+	bobJoin := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/join", map[string]any{
+		"playerName": "Bob",
+	})
+	if bobJoin.StatusCode != http.StatusOK {
+		t.Fatalf("expected bob join to return 200, got %d", bobJoin.StatusCode)
+	}
+	bobCookie := bobJoin.Cookies()[0]
+	bobBody := decodeBody[RoomView](t, bobJoin.Body)
+
+	aliceJoinTeam := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/actions", map[string]any{
+		"type": "join_team",
+		"team": int(TeamLeft),
+	}, aliceCookie)
+	if aliceJoinTeam.StatusCode != http.StatusOK {
+		t.Fatalf("expected alice team join to return 200, got %d", aliceJoinTeam.StatusCode)
+	}
+
+	bobJoinTeam := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/actions", map[string]any{
+		"type": "join_team",
+		"team": int(TeamRight),
+	}, bobCookie)
+	if bobJoinTeam.StatusCode != http.StatusOK {
+		t.Fatalf("expected bob team join to return 200, got %d", bobJoinTeam.StatusCode)
+	}
+
+	setTeamsMode := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/actions", map[string]any{
+		"type":     "set_game_type",
+		"gameType": int(GameTypeTeams),
+	}, aliceCookie)
+	if setTeamsMode.StatusCode != http.StatusOK {
+		t.Fatalf("expected moderator set_game_type to return 200, got %d", setTeamsMode.StatusCode)
+	}
+
+	bobStart := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/actions", map[string]any{
+		"type": "start_round",
+	}, bobCookie)
+	if bobStart.StatusCode != http.StatusForbidden {
+		t.Fatalf("expected non-moderator start_round to return 403, got %d", bobStart.StatusCode)
+	}
+
+	assignBob := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/actions", map[string]any{
+		"type":     "set_team",
+		"playerId": bobBody.Viewer.PlayerID,
+		"team":     int(TeamLeft),
+	}, aliceCookie)
+	if assignBob.StatusCode != http.StatusOK {
+		t.Fatalf("expected moderator set_team to return 200, got %d", assignBob.StatusCode)
+	}
+	assignBody := decodeBody[RoomView](t, assignBob.Body)
+	if assignBody.Players[bobBody.Viewer.PlayerID].Team != TeamLeft {
+		t.Fatalf("expected bob to be force-assigned to left team, got %v", assignBody.Players[bobBody.Viewer.PlayerID].Team)
+	}
+
+	aliceStart := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/actions", map[string]any{
+		"type": "start_round",
+	}, aliceCookie)
+	if aliceStart.StatusCode != http.StatusOK {
+		t.Fatalf("expected moderator start_round to return 200, got %d", aliceStart.StatusCode)
+	}
+	startedBody := decodeBody[RoomView](t, aliceStart.Body)
+	if startedBody.RoundPhase != RoundPhaseGiveClue {
+		t.Fatalf("expected started game to enter clue phase, got %v", startedBody.RoundPhase)
+	}
+	if startedBody.ActingTeam != TeamLeft {
+		t.Fatalf("expected acting team to match moderator starter team, got %v", startedBody.ActingTeam)
+	}
+}

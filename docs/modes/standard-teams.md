@@ -30,3 +30,9 @@ Standard mode is the classic competitive Longwave flow.
 - This is the only mode with explicit team membership.
 - This is the only mode with counter-guessing.
 - Most of the role ideas you requested naturally fit here first, because "psychic", "representative", and team-only permissions all map cleanly onto this mode.
+
+
+## Moderator controls
+
+- Only moderators may press **Start Game** during team setup.
+- Moderators may force-assign any joined player to LEFT BRAIN or RIGHT BRAIN before or during team-mode play.

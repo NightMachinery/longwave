@@ -7,7 +7,7 @@ Longwave now supports server-enforced room roles and filtered hidden information
 - **Moderator**
   - The first player to join a room becomes the creator and a moderator.
   - Creator status is permanent for that room.
-  - Moderators can change mode, reset the room, change psychic/clue settings, promote or demote moderators, mark representatives, and move players into or out of observer mode.
+  - Moderators can change mode, start team games, reset the room, change psychic/clue settings, promote or demote moderators, mark representatives, move players into or out of observer mode, and force-assign players to either team.
 - **Representative**
   - Representatives are optional.
   - If a relevant acting pool has no representatives, everyone in that pool can submit the guess.

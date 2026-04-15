@@ -4,6 +4,7 @@ export type RoomAction =
   | { type: "set_name"; name: string }
   | { type: "set_game_type"; gameType: GameType }
   | { type: "join_team"; team: Team }
+  | { type: "set_team"; playerId: string; team: Team }
   | { type: "start_round" }
   | { type: "set_psychic_count"; psychicCount: number }
   | { type: "set_clue_quota"; clueQuota: number }
