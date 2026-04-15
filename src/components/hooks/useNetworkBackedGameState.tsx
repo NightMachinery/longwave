@@ -1,8 +1,7 @@
-import { useState, useEffect } from "react";
-import firebase from "firebase/app";
-import "firebase/database";
-import { GameState, InitialGameState, Team } from "../../state/GameState";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { fetchRoom, patchRoom, subscribeToRoom } from "../../network/roomApi";
+import { GameState, InitialGameState, Team } from "../../state/GameState";
 
 export function useNetworkBackedGameState(
   roomId: string,
@@ -15,43 +14,101 @@ export function useNetworkBackedGameState(
   );
 
   useEffect(() => {
-    const dbRef = firebase.database().ref("rooms/" + roomId);
+    let isDisposed = false;
 
-    dbRef.on("value", (appState) => {
-      const networkGameState: GameState = appState.val();
-      const completeGameState = {
-        ...InitialGameState(i18n.language),
-        ...networkGameState,
-      };
+    const mergeIntoInitialGameState = (networkGameState: Partial<GameState>) => ({
+      ...InitialGameState(i18n.language),
+      ...networkGameState,
+    });
 
-      if (networkGameState?.roundPhase === undefined) {
-        dbRef.set(completeGameState);
-        return;
-      }
+    const syncLocalPlayer = async (networkGameState: Partial<GameState> | null) => {
+      const completeGameState = mergeIntoInitialGameState(networkGameState ?? {});
 
       if (completeGameState.players[playerId] === undefined) {
-        completeGameState.players[playerId] = {
-          name: playerName,
-          team: Team.Unset,
+        const shouldWriteFullRoomState =
+          networkGameState === null ||
+          networkGameState.roundPhase === undefined;
+
+        const nextGameState = {
+          ...completeGameState,
+          players: {
+            ...completeGameState.players,
+            [playerId]: {
+              name: playerName,
+              team: Team.Unset,
+            },
+          },
         };
-        dbRef.set(completeGameState);
+
+        if (!isDisposed) {
+          setGameState(nextGameState);
+        }
+
+        try {
+          const savedGameState = await patchRoom(
+            roomId,
+            shouldWriteFullRoomState
+              ? nextGameState
+              : {
+                  players: nextGameState.players,
+                }
+          );
+
+          if (!isDisposed) {
+            setGameState(mergeIntoInitialGameState(savedGameState));
+          }
+        } catch (error) {
+          console.error("Failed to persist room state", error);
+        }
+
         return;
       }
 
-      setGameState(completeGameState);
-    });
-    return () => dbRef.off();
-  }, [playerId, playerName, roomId, i18n]);
+      if (!isDisposed) {
+        setGameState(completeGameState);
+      }
+    };
 
-  const dbRef = firebase.database().ref("rooms/" + roomId);
+    void fetchRoom(roomId)
+      .then((networkGameState) => syncLocalPlayer(networkGameState))
+      .catch((error) => {
+        console.error("Failed to load room state", error);
+      });
+
+    const unsubscribe = subscribeToRoom(
+      roomId,
+      (nextGameState) => {
+        void syncLocalPlayer(nextGameState);
+      },
+      (error) => {
+        console.error("Room event stream failed", error);
+      }
+    );
+
+    return () => {
+      isDisposed = true;
+      unsubscribe();
+    };
+  }, [i18n.language, playerId, playerName, roomId]);
 
   return [
     gameState,
     (newState: Partial<GameState>) => {
-      dbRef.set({
-        ...gameState,
+      setGameState((previousGameState) => ({
+        ...previousGameState,
         ...newState,
-      });
+      }));
+
+      void patchRoom(roomId, newState)
+        .then((savedGameState) => {
+          setGameState({
+            ...InitialGameState(i18n.language),
+            ...savedGameState,
+          });
+        })
+        .catch((error) => {
+          console.error("Failed to update room state", error);
+        });
     },
   ];
 }

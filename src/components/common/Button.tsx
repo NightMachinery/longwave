@@ -1,20 +1,21 @@
-import React from "react";
+import React, { ReactNode } from "react";
 
 export function Button(props: {
-  text: string;
+  text: ReactNode;
   onClick: () => void;
   disabled?: boolean;
 }) {
   return (
-    <input
+    <button
       style={{
         padding: 8,
         margin: 8,
       }}
-      type="button"
-      value={props.text}
       onClick={props.onClick}
       disabled={props.disabled}
-    />
+      type="button"
+    >
+      {props.text}
+    </button>
   );
 }

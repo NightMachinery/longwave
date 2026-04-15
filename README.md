@@ -67,23 +67,34 @@ You can easily find the positions where the replacements take place via the firs
 You can simply run the project on your computer. The following steps are necessary:
 
 1. Clone or fork the repository
-2. Install node.js and npm
+2. Install node.js, pnpm, and Go
 3. Change to the project directory
-4. Start the command `npm outdated` and check the outdated packages
-5. Run `npm update --save` to update all obsolete packages to the latest minor version
-6. Run the command `npm install` to install dependent and maybe missing packages
-7. Launch the application on the local system via `npm start
-8. The default browser will be called with the address `http://localhost:3000`
+4. Run the command `pnpm install` to install dependent and maybe missing packages
+5. In one shell, start the local Go room-sync backend via `pnpm start:backend`
+6. In another shell, launch the frontend dev server via `pnpm start`
+7. Open `http://localhost:3000`
+
+The frontend dev server proxies `/api` and `/healthz` to the local backend on `127.0.0.1:3310`.
+
+## Self-hosting
+
+For the supported intranet/self-host deployment flow, see:
+
+```text
+docs/self-hosting.md
+```
+
+That flow replaces the old Firebase runtime dependency with a local Go + SQLite backend and is the recommended deployment path for this repo.
 
 ### Available Scripts
 
 In the project directory, you can run:
 
-#### `npm outdated` / `npm update --save` / `npm install`
+#### `pnpm install`
 
-Checks the included packages for up-to-dateness , updates them and installs required dependencies.
+Installs the frontend dependencies from the committed `pnpm-lock.yaml`.
 
-#### `npm start`
+#### `pnpm start`
 
 Runs the app in the development mode.<br />
 Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
@@ -91,12 +102,20 @@ Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
 The page will reload if you make edits.<br />
 You will also see any lint errors in the console.
 
-#### `npm test`
+This development server expects the local backend from `pnpm start:backend` to be running.
+
+#### `pnpm start:backend`
+
+Runs the local Go + SQLite room-sync backend for development on `127.0.0.1:3310`.
+
+For the supported intranet/deployed multiplayer runtime, use the self-host flow in `docs/self-hosting.md`.
+
+#### `pnpm test`
 
 Launches the test runner in the interactive watch mode.<br />
 See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
 
-#### `npm run build`
+#### `pnpm build`
 
 Builds the app for production to the `build` folder.<br />
 It correctly bundles React in production mode and optimizes the build for the best performance.
@@ -106,7 +125,7 @@ Your app is ready to be deployed!
 
 See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
 
-#### `npm run eject`
+#### `pnpm eject`
 
 **Note: this is a one-way operation. Once you `eject`, you can’t go back!**
 

@@ -78,7 +78,7 @@ export interface GameState {
   deckLanguage: string | null;
 }
 
-export function InitialGameState(deckLanguage: string): GameState {
+export function InitialGameState(deckLanguage: string = "en"): GameState {
   return {
     gameType: GameType.Teams,
     roundPhase: RoundPhase.SetupGame,

@@ -1,4 +1,4 @@
-import React, { useContext } from "react";
+import React, { useContext, useState } from "react";
 import { GameType, RoundPhase, TeamName } from "../../state/GameState";
 import { Spectrum } from "../common/Spectrum";
 import { CenteredColumn } from "../common/LayoutElements";
@@ -6,11 +6,15 @@ import { Button } from "../common/Button";
 import { GameModelContext } from "../../state/GameModelContext";
 import { RecordEvent } from "../../TrackEvent";
 import { ScoreCoopRound } from "../../state/ScoreRound";
+import { copyTextToClipboard } from "../../utils/copyTextToClipboard";
 
 import { useTranslation } from "react-i18next";
 
 export function MakeGuess() {
   const { t } = useTranslation();
+  const [copyStatus, setCopyStatus] = useState<"idle" | "success" | "error">(
+    "idle"
+  );
   const { gameState, localPlayer, clueGiver, spectrumCard, setGameState } =
     useContext(GameModelContext);
 
@@ -24,6 +28,7 @@ export function MakeGuess() {
       localPlayer.team !== clueGiver.team);
 
   const guessingTeamString = TeamName(clueGiver.team, t);
+  const inviteUrl = window.location.href;
 
   if (notMyTurn) {
     return (
@@ -50,9 +55,21 @@ export function MakeGuess() {
               <p>{t("makeguess.invite_other_players")}</p>
               <p>
                 {t("makeguess.share_game_url", {
-                  game_url: window.location.href,
+                  game_url: inviteUrl,
                 })}
               </p>
+              <Button
+                text={t("makeguess.copy_game_url")}
+                onClick={() => {
+                  void copyTextToClipboard(inviteUrl).then((copied) => {
+                    setCopyStatus(copied ? "success" : "error");
+                  });
+                }}
+              />
+              {copyStatus === "success" && (
+                <p>{t("makeguess.copy_success")}</p>
+              )}
+              {copyStatus === "error" && <p>{t("makeguess.copy_failed")}</p>}
             </div>
           )}
         </CenteredColumn>

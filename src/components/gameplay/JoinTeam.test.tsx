@@ -1,9 +1,7 @@
-import { render, fireEvent, within, waitFor } from "@testing-library/react";
+import { render, fireEvent, within } from "@testing-library/react";
 import { InitialGameState, GameState, Team } from "../../state/GameState";
 import { JoinTeam } from "./JoinTeam";
 import { TestContext } from "./TestContext";
-
-jest.useFakeTimers();
 
 test("Assigns player to the selected team", async () => {
   const gameState: GameState = {
@@ -23,18 +21,12 @@ test("Assigns player to the selected team", async () => {
     </TestContext>
   );
 
-  let leftBrain: HTMLElement | null = null;
+  const leftBrain = await component.findByText("LEFT BRAIN");
+  expect(leftBrain).not.toBeNull();
 
-  await waitFor(() => {
-    leftBrain = component.getByText("LEFT BRAIN");
-    return leftBrain;
+  const button = within(leftBrain.parentElement!).getByRole("button", {
+    name: "Join",
   });
-
-  expect(leftBrain).toBeInTheDocument();
-
-  const button = leftBrain!.parentNode?.querySelector("input")!;
-
-  expect(button.value).toEqual("Join");
 
   await fireEvent.click(button);
 
@@ -83,10 +75,10 @@ test("Shows current team members", () => {
   );
 
   const leftBrain = within(component.getByText("LEFT BRAIN").parentElement!);
-  expect(leftBrain.getByText("Left Team 1")).toBeInTheDocument();
-  expect(leftBrain.getByText("Left Team 2")).toBeInTheDocument();
+  expect(leftBrain.getByText("Left Team 1")).not.toBeNull();
+  expect(leftBrain.getByText("Left Team 2")).not.toBeNull();
 
   const rightBrain = within(component.getByText("RIGHT BRAIN").parentElement!);
-  expect(rightBrain.getByText("Right Team 1")).toBeInTheDocument();
-  expect(rightBrain.getByText("Right Team 2")).toBeInTheDocument();
+  expect(rightBrain.getByText("Right Team 1")).not.toBeNull();
+  expect(rightBrain.getByText("Right Team 2")).not.toBeNull();
 });

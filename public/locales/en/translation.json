@@ -63,6 +63,9 @@
     "waiting_guessing_team": "Waiting for {{guessingteam}} to guess...",
     "invite_other_players": "Invite other players to join the game.",
     "share_game_url": "Share this URL with them: {{game_url}}",
+    "copy_game_url": "Copy invite link",
+    "copy_success": "Invite link copied.",
+    "copy_failed": "Could not copy the invite link. Copy it manually from the URL above.",
     "guess_for_team": "Submit Guess for {{teamname}}"
   },
   "previousturnresult": {

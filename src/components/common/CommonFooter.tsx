@@ -1,3 +1,4 @@
+import { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { CenteredColumn, CenteredRow } from "./LayoutElements";
 
@@ -28,7 +29,7 @@ export function CommonFooter() {
         <a target="_blank" href="https://www.patreon.com/improvedinitiative">
           <img
             alt="Patreon logo"
-            title={t("commonfooter.support_patreon")}
+            title={`${t("commonfooter.support_patreon")}`}
             src="./Digital-Patreon-Wordmark_FieryCoral.png"
             style={{ width: "150px", margin: 8 }}
           />
@@ -39,7 +40,7 @@ export function CommonFooter() {
   );
 }
 
-function Link(props: { href: string; text: string }) {
+function Link(props: { href: string; text: ReactNode }) {
   return (
     <a href={props.href} target="_blank" rel="noopener noreferrer">
       {props.text}

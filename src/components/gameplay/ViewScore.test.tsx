@@ -28,7 +28,7 @@ test("Applies 4 points for a perfect guess", () => {
   );
 
   const subject = component.getByText("Score: 4 points!");
-  expect(subject).toBeInTheDocument();
+  expect(subject).not.toBeNull();
 });
 
 test("Applies 2 points for off by 2", () => {
@@ -45,7 +45,7 @@ test("Applies 2 points for off by 2", () => {
   );
 
   const subject = component.getByText("Score: 2 points!");
-  expect(subject).toBeInTheDocument();
+  expect(subject).not.toBeNull();
 });
 
 test("Applies 0 points for off by 3", () => {
@@ -62,7 +62,7 @@ test("Applies 0 points for off by 3", () => {
   );
 
   const subject = component.getByText("Score: 0 points!");
-  expect(subject).toBeInTheDocument();
+  expect(subject).not.toBeNull();
 });
 
 test("Includes the score for a correct counter guess", () => {
@@ -82,7 +82,7 @@ test("Includes the score for a correct counter guess", () => {
   const subject = component.getByText(
     "RIGHT BRAIN gets 1 point for their correct counter guess."
   );
-  expect(subject).toBeInTheDocument();
+  expect(subject).not.toBeNull();
 });
 
 test("Includes the score for a wrong counter guess", () => {
@@ -102,7 +102,7 @@ test("Includes the score for a wrong counter guess", () => {
   const subject = component.getByText(
     "RIGHT BRAIN gets 0 points for their counter guess."
   );
-  expect(subject).toBeInTheDocument();
+  expect(subject).not.toBeNull();
 });
 
 test("Applies catchup rule", () => {
@@ -122,7 +122,7 @@ test("Applies catchup rule", () => {
   const subject = component.getByText(
     "Catchup activated: LEFT BRAIN takes a bonus turn!"
   );
-  expect(subject).toBeInTheDocument();
+  expect(subject).not.toBeNull();
 });
 
 test("Ends game when one team has 10 points", () => {
@@ -138,7 +138,7 @@ test("Ends game when one team has 10 points", () => {
   );
 
   const subject = component.getByText("LEFT BRAIN wins!");
-  expect(subject).toBeInTheDocument();
+  expect(subject).not.toBeNull();
 });
 
 test("Does not end game when both teams have 10 points", () => {

@@ -24,7 +24,7 @@ test("Should show help text when more players are needed", () => {
   const subject = component.queryByText(
     "Invite other players to join the game."
   );
-  expect(subject).toBeInTheDocument();
+  expect(subject).not.toBeNull();
 });
 
 test("Should show help text when more players are needed", () => {
@@ -52,7 +52,7 @@ test("Should show help text when more players are needed", () => {
   const subject = component.queryByText(
     "Invite other players to join the game."
   );
-  expect(subject).not.toBeInTheDocument();
+  expect(subject).toBeNull();
 });
 
 test("Should show button to submit your team's guess", () => {
@@ -79,5 +79,5 @@ test("Should show button to submit your team's guess", () => {
 
   const subject = component.getByText("Submit Guess for LEFT BRAIN");
 
-  expect(subject).toBeInTheDocument();
+  expect(subject).not.toBeNull();
 });
