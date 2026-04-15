@@ -17,6 +17,8 @@ After the team's guess attempt, the other team also has the opportunity to score
 
 The first team to score 10 points wins.
 
+For a mode-by-mode explanation of Standard (Teams), Cooperative, and Free Play, see `docs/modes/README.md`.
+
 ## Translations
 
 To add a new translation, follow these steps:
