@@ -1,32 +1,52 @@
-import { useParams } from "react-router-dom";
-import React from "react";
-import { useStorageBackedState } from "../hooks/useStorageBackedState";
+import { useLocation, useParams } from "react-router-dom";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNetworkBackedGameState } from "../hooks/useNetworkBackedGameState";
 import { InputName } from "./InputName";
-import { RandomFourCharacterString } from "../../state/RandomFourCharacterString";
 import { GameModelContext } from "../../state/GameModelContext";
 import { ActiveGame } from "./ActiveGame";
 import { BuildGameModel } from "../../state/BuildGameModel";
 import { RoomIdHeader } from "../common/RoomIdHeader";
 import { FakeRooms } from "./FakeRooms";
 import { useTranslation } from "react-i18next";
+import { Team } from "../../state/GameState";
+import {
+  getPlayerNameStorageKey,
+  readStoredPlayerName,
+  resolveRoomIdentity,
+  writeStoredPlayerName,
+} from "../../utils/roomIdentity";
 
 export function GameRoom() {
   const { roomId } = useParams<{ roomId: string }>();
+  const location = useLocation();
   if (roomId === undefined) {
     throw new Error("RoomId missing");
   }
 
-  const [playerName, setPlayerName] = useStorageBackedState("", "name");
-
-  const [playerId] = useStorageBackedState(
-    RandomFourCharacterString(),
-    "playerId"
+  const roomIdentity = useMemo(
+    () => resolveRoomIdentity(localStorage, roomId, location.search),
+    [location.search, roomId]
   );
+  const playerNameStorageKey = useMemo(
+    () => getPlayerNameStorageKey(roomIdentity),
+    [roomIdentity]
+  );
+  const [playerName, setPlayerNameState] = useState(() =>
+    readStoredPlayerName(localStorage, playerNameStorageKey)
+  );
+
+  useEffect(() => {
+    setPlayerNameState(readStoredPlayerName(localStorage, playerNameStorageKey));
+  }, [playerNameStorageKey]);
+
+  const setPlayerName = (nextPlayerName: string) => {
+    writeStoredPlayerName(localStorage, playerNameStorageKey, nextPlayerName);
+    setPlayerNameState(nextPlayerName);
+  };
 
   const [gameState, setGameState] = useNetworkBackedGameState(
     roomId,
-    playerId,
+    roomIdentity.effectiveRoomAuthId,
     playerName
   );
 
@@ -40,6 +60,27 @@ export function GameRoom() {
     return null;
   }
 
+  useEffect(() => {
+    const syncedPlayerName =
+      gameState.players[roomIdentity.effectiveRoomAuthId]?.name ?? "";
+
+    if (syncedPlayerName.length > 0 && syncedPlayerName !== playerName) {
+      setPlayerName(syncedPlayerName);
+    }
+  }, [gameState.players, playerName, roomIdentity.effectiveRoomAuthId]);
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    if (!searchParams.get("rocketcrab")) {
+      return;
+    }
+
+    const rocketcrabPlayerName = searchParams.get("name");
+    if (rocketcrabPlayerName !== null && rocketcrabPlayerName !== playerName) {
+      setPlayerName(rocketcrabPlayerName);
+    }
+  }, [location.search, playerName]);
+
   if (roomId === "MULTIPLAYER_TEST") {
     return <FakeRooms />;
   }
@@ -47,7 +88,7 @@ export function GameRoom() {
   const gameModel = BuildGameModel(
     gameState,
     setGameState,
-    playerId,
+    roomIdentity.effectiveRoomAuthId,
     cardsTranslation.t,
     setPlayerName
   );
@@ -57,22 +98,23 @@ export function GameRoom() {
       <InputName
         setName={(name) => {
           setPlayerName(name);
-          gameState.players[playerId].name = name;
-          setGameState(gameState);
+          setGameState({
+            players: {
+              ...gameState.players,
+              [roomIdentity.effectiveRoomAuthId]: {
+                name,
+                team:
+                  gameState.players[roomIdentity.effectiveRoomAuthId]?.team ??
+                  Team.Unset,
+              },
+            },
+          });
         }}
       />
     );
   }
 
-  const searchParams = new URLSearchParams(window.location.search);
-  if (searchParams.get("rocketcrab")) {
-    const rocketcrabPlayerName = searchParams.get("name");
-    if (rocketcrabPlayerName !== null && rocketcrabPlayerName !== playerName) {
-      setPlayerName(rocketcrabPlayerName);
-    }
-  }
-
-  if (!gameState?.players?.[playerId]) {
+  if (!gameState?.players?.[roomIdentity.effectiveRoomAuthId]) {
     return null;
   }
 

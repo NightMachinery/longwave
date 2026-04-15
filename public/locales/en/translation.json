@@ -18,7 +18,12 @@
     "change_name": "Change Name",
     "switch_language_header": "Language setting",
     "language_en": "English",
-    "language_de": "Deutsch"
+    "language_de": "Deutsch",
+    "copy_room_link": "Copy room link",
+    "copy_room_link_success": "Room link copied.",
+    "migrate_device": "Migrate device",
+    "migrate_device_success": "Migration link copied.",
+    "copy_link_failed": "Could not copy the link. Copy it manually from the address bar."
   },
   "spectrum": {
     "guessing": "Guessing...",
@@ -50,7 +55,8 @@
     "give_clue": "Submit clue"
   },
   "inputname": {
-    "your_name": "Enter your name"
+    "your_name": "Enter your name",
+    "submit_name": "Save name"
   },
   "jointeam": {
     "join_team": "Join Team",

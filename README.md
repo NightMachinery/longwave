@@ -86,6 +86,14 @@ docs/self-hosting.md
 
 That flow replaces the old Firebase runtime dependency with a local Go + SQLite backend and is the recommended deployment path for this repo.
 
+## Room identity and sharing
+
+- Each browser/device gets its own persistent local auth token.
+- Each room maps that device token to an opaque room-specific auth id used as the player identity inside that room.
+- **Copy room link** shares the clean room URL only.
+- **Migrate device** copies a room-specific link with `?roomAuth=...` so another device can join as the same in-room identity without exposing the device's stored auth token.
+- The migrated link remains refresh-safe because it keeps the room-specific auth id in the URL.
+
 ### Available Scripts
 
 In the project directory, you can run:

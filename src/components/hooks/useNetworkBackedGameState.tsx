@@ -25,6 +25,13 @@ export function useNetworkBackedGameState(
       const completeGameState = mergeIntoInitialGameState(networkGameState ?? {});
 
       if (completeGameState.players[playerId] === undefined) {
+        if (playerName.trim().length === 0) {
+          if (!isDisposed) {
+            setGameState(completeGameState);
+          }
+          return;
+        }
+
         const shouldWriteFullRoomState =
           networkGameState === null ||
           networkGameState.roundPhase === undefined;

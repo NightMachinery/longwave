@@ -14,7 +14,12 @@
   },
   "roomidheader": {
     "roomid": "Identifiant de salon :",
-    "reset_room": "Réinitialiser le Salon"
+    "reset_room": "Réinitialiser le Salon",
+    "copy_room_link": "Copy room link",
+    "copy_room_link_success": "Room link copied.",
+    "migrate_device": "Migrate device",
+    "migrate_device_success": "Migration link copied.",
+    "copy_link_failed": "Could not copy the link. Copy it manually from the address bar."
   },
   "spectrum": {
     "guessing": "En cours de déduction...",
@@ -46,7 +51,8 @@
     "give_clue": "Envoyer un indice"
   },
   "inputname": {
-    "your_name": "Taper votre nom"
+    "your_name": "Taper votre nom",
+    "submit_name": "Save name"
   },
   "jointeam": {
     "join_team": "Rejoindre une Équipe",

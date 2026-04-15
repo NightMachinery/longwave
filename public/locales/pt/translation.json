@@ -14,7 +14,12 @@
   },
   "roomidheader": {
     "roomid": "ID da Sala:",
-    "reset_room": "Resetar Sala"
+    "reset_room": "Resetar Sala",
+    "copy_room_link": "Copy room link",
+    "copy_room_link_success": "Room link copied.",
+    "migrate_device": "Migrate device",
+    "migrate_device_success": "Migration link copied.",
+    "copy_link_failed": "Could not copy the link. Copy it manually from the address bar."
   },
   "spectrum": {
     "guessing": "Adivinhando...",
@@ -46,7 +51,8 @@
     "give_clue": "Enviar dica"
   },
   "inputname": {
-    "your_name": "Digite seu nome"
+    "your_name": "Digite seu nome",
+    "submit_name": "Save name"
   },
   "jointeam": {
     "join_team": "Entrar para o time",

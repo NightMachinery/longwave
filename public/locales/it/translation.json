@@ -1,4 +1,4 @@
-  {
+{
   "commonfooter": {
     "developed_by": "è stato ideato da Wolfgang Warsch, Alex Hague e Justin Vickers.",
     "adapted_for_web": "Riadattato per il web",
@@ -18,7 +18,12 @@
     "change_name": "Cambia Nome",
     "switch_language_header": "Impostazioni lingua",
     "language_en": "Inglese",
-    "language_de": "Tedesco"
+    "language_de": "Tedesco",
+    "copy_room_link": "Copy room link",
+    "copy_room_link_success": "Room link copied.",
+    "migrate_device": "Migrate device",
+    "migrate_device_success": "Migration link copied.",
+    "copy_link_failed": "Could not copy the link. Copy it manually from the address bar."
   },
   "spectrum": {
     "guessing": "Indovinando...",
@@ -50,7 +55,8 @@
     "give_clue": "Conferma indizio"
   },
   "inputname": {
-    "your_name": "Inserisci il tuo nome"
+    "your_name": "Inserisci il tuo nome",
+    "submit_name": "Save name"
   },
   "jointeam": {
     "join_team": "Unisciti alla squadra",

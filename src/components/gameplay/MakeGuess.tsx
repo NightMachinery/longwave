@@ -7,6 +7,7 @@ import { GameModelContext } from "../../state/GameModelContext";
 import { RecordEvent } from "../../TrackEvent";
 import { ScoreCoopRound } from "../../state/ScoreRound";
 import { copyTextToClipboard } from "../../utils/copyTextToClipboard";
+import { buildCanonicalRoomUrl } from "../../utils/roomIdentity";
 
 import { useTranslation } from "react-i18next";
 
@@ -28,7 +29,12 @@ export function MakeGuess() {
       localPlayer.team !== clueGiver.team);
 
   const guessingTeamString = TeamName(clueGiver.team, t);
-  const inviteUrl = window.location.href;
+  const inviteUrl = new URL(
+    buildCanonicalRoomUrl(
+      window.location.origin,
+      decodeURIComponent(window.location.pathname.replace(/^\//, ""))
+    )
+  ).toString();
 
   if (notMyTurn) {
     return (

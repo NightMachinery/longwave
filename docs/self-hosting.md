@@ -177,6 +177,8 @@ That keeps the site usable over plain HTTP when needed.
 - The backend serves the built SPA and exposes `/healthz`.
 - Room state is persisted in SQLite and shared over same-origin HTTP + SSE.
 - Rooms expire after 7 days of inactivity.
+- Browser identity is local-first: each device stores its own auth token, and each room uses a room-specific opaque auth id derived from that device identity.
+- The room menu can copy either a clean room invite link or a room-scoped migration link (`?roomAuth=...`) for continuing the same player identity on another device.
 - `PATCH /api/rooms/:roomId` uses a shallow top-level merge, matching the existing client update pattern.
 
 ## Logs and debugging
