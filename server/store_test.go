@@ -2,13 +2,12 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"path/filepath"
 	"testing"
 	"time"
 )
 
-func TestPatchRoomUsesShallowTopLevelMerge(t *testing.T) {
+func TestSaveAndLoadRoom(t *testing.T) {
 	t.Parallel()
 
 	now := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
@@ -20,56 +19,26 @@ func TestPatchRoomUsesShallowTopLevelMerge(t *testing.T) {
 	}()
 
 	ctx := context.Background()
-	initialState, err := store.PatchRoom(ctx, "ROOM", mustPatch(t, map[string]any{
-		"guess": 7,
-		"players": map[string]any{
-			"p1": map[string]any{
-				"name": "Alice",
-			},
-		},
-	}))
+	room := InitialRoomState("en")
+	room.CreatorID = "player1"
+	room.Players["player1"] = PlayerState{Name: "Alice", SessionSecret: "secret"}
+
+	if err := store.SaveRoom(ctx, "ROOM", room); err != nil {
+		t.Fatalf("save room: %v", err)
+	}
+
+	loadedRoom, found, err := store.LoadRoom(ctx, "ROOM", false)
 	if err != nil {
-		t.Fatalf("patch initial room: %v", err)
+		t.Fatalf("load room: %v", err)
 	}
-
-	var initial map[string]any
-	if err := json.Unmarshal(initialState, &initial); err != nil {
-		t.Fatalf("decode initial state: %v", err)
+	if !found {
+		t.Fatalf("expected room to be found")
 	}
-	if initial["guess"].(float64) != 7 {
-		t.Fatalf("expected guess 7, got %#v", initial["guess"])
+	if loadedRoom.CreatorID != "player1" {
+		t.Fatalf("expected creator to round-trip, got %q", loadedRoom.CreatorID)
 	}
-
-	nextState, err := store.PatchRoom(ctx, "ROOM", mustPatch(t, map[string]any{
-		"clue": "coffee",
-		"players": map[string]any{
-			"p2": map[string]any{
-				"name": "Bob",
-			},
-		},
-	}))
-	if err != nil {
-		t.Fatalf("patch next room state: %v", err)
-	}
-
-	var actual map[string]any
-	if err := json.Unmarshal(nextState, &actual); err != nil {
-		t.Fatalf("decode merged state: %v", err)
-	}
-
-	if actual["guess"].(float64) != 7 {
-		t.Fatalf("expected guess to survive merge, got %#v", actual["guess"])
-	}
-	if actual["clue"].(string) != "coffee" {
-		t.Fatalf("expected clue coffee, got %#v", actual["clue"])
-	}
-
-	players := actual["players"].(map[string]any)
-	if _, ok := players["p1"]; ok {
-		t.Fatalf("expected players to be replaced by top-level shallow merge, got %#v", players)
-	}
-	if _, ok := players["p2"]; !ok {
-		t.Fatalf("expected replacement players map to include p2, got %#v", players)
+	if loadedRoom.Players["player1"].Name != "Alice" {
+		t.Fatalf("expected player to round-trip, got %#v", loadedRoom.Players["player1"])
 	}
 }
 
@@ -85,9 +54,7 @@ func TestDeleteExpiredRemovesOldRooms(t *testing.T) {
 	}()
 
 	ctx := context.Background()
-	if _, err := store.PatchRoom(ctx, "ROOM", mustPatch(t, map[string]any{
-		"guess": 3,
-	})); err != nil {
+	if err := store.SaveRoom(ctx, "ROOM", InitialRoomState("en")); err != nil {
 		t.Fatalf("create room: %v", err)
 	}
 
@@ -96,7 +63,7 @@ func TestDeleteExpiredRemovesOldRooms(t *testing.T) {
 		t.Fatalf("delete expired rooms: %v", err)
 	}
 
-	_, found, err := store.GetRoom(ctx, "ROOM", false)
+	_, found, err := store.LoadRoom(ctx, "ROOM", false)
 	if err != nil {
 		t.Fatalf("get room after cleanup: %v", err)
 	}
@@ -116,20 +83,4 @@ func newTestStore(t *testing.T, now *time.Time) *Store {
 	}
 
 	return store
-}
-
-func mustPatch(t *testing.T, payload map[string]any) map[string]json.RawMessage {
-	t.Helper()
-
-	encodedPayload, err := json.Marshal(payload)
-	if err != nil {
-		t.Fatalf("encode patch payload: %v", err)
-	}
-
-	var patch map[string]json.RawMessage
-	if err := json.Unmarshal(encodedPayload, &patch); err != nil {
-		t.Fatalf("decode patch payload: %v", err)
-	}
-
-	return patch
 }

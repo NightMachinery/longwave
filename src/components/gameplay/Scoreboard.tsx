@@ -2,12 +2,7 @@ import React, { useState, useContext } from "react";
 import { GameType, Team, TeamName } from "../../state/GameState";
 import { CenteredRow, CenteredColumn } from "../common/LayoutElements";
 import { GameModelContext } from "../../state/GameModelContext";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTimesCircle } from "@fortawesome/free-solid-svg-icons";
-import { Animate } from "../common/Animate";
-import { useRef } from "react";
-import { useEffect } from "react";
-
+import { Button } from "../common/Button";
 import { useTranslation } from "react-i18next";
 
 export function Scoreboard() {
@@ -21,42 +16,46 @@ export function Scoreboard() {
     alignItems: "center",
   };
 
-  if (gameState.gameType === GameType.Freeplay) {
-    return (
-      <CenteredColumn style={style}>
-        <em>{t("scoreboard.free_play")}</em>
-        <CenteredRow style={{ flexWrap: "wrap" }}>
-          {Object.keys(gameState.players).map(toPlayerRow)}
-        </CenteredRow>
-      </CenteredColumn>
-    );
-  }
-
-  if (gameState.gameType === GameType.Cooperative) {
-    const cardsRemaining = 7 + gameState.coopBonusTurns - gameState.turnsTaken;
-    return (
-      <CenteredColumn style={style}>
-        <em>
-          {t("scoreboard.coop_score")}: {gameState.coopScore}{" "}
-          {t("scoreboard.points")}
-        </em>
-        <div>
-          {cardsRemaining === 0
-            ? t("scoreboard.last_card")
-            : t("scoreboard.card_remaining") + ": " + cardsRemaining}
-        </div>
-        <CenteredRow style={{ flexWrap: "wrap" }}>
-          {Object.keys(gameState.players).map(toPlayerRow)}
-        </CenteredRow>
-      </CenteredColumn>
-    );
-  }
+  const observers = Object.keys(gameState.players).filter(
+    (playerId) => gameState.players[playerId].isObserver
+  );
 
   return (
-    <CenteredRow style={style}>
-      <TeamColumn team={Team.Left} score={gameState.leftScore} />
-      <TeamColumn team={Team.Right} score={gameState.rightScore} />
-    </CenteredRow>
+    <CenteredColumn style={style}>
+      {gameState.gameType === GameType.Freeplay && <em>{t("scoreboard.free_play")}</em>}
+      {gameState.gameType === GameType.Cooperative && (
+        <>
+          <em>
+            {t("scoreboard.coop_score")}: {gameState.coopScore} {t("scoreboard.points")}
+          </em>
+          <div>
+            {t("scoreboard.card_remaining")}: {7 + gameState.coopBonusTurns - gameState.turnsTaken}
+          </div>
+        </>
+      )}
+      {gameState.gameType === GameType.Teams ? (
+        <CenteredRow style={{ width: "100%", alignItems: "flex-start" }}>
+          <TeamColumn team={Team.Left} score={gameState.leftScore} />
+          <TeamColumn team={Team.Right} score={gameState.rightScore} />
+        </CenteredRow>
+      ) : (
+        <CenteredRow style={{ flexWrap: "wrap" }}>
+          {Object.keys(gameState.players)
+            .filter((playerId) => !gameState.players[playerId].isObserver)
+            .map((playerId) => (
+              <PlayerRow key={playerId} playerId={playerId} />
+            ))}
+        </CenteredRow>
+      )}
+      {observers.length > 0 && (
+        <CenteredColumn style={{ alignItems: "flex-start", marginTop: 12 }}>
+          <div>{t("scoreboard.observers", "Observers")}</div>
+          {observers.map((playerId) => (
+            <PlayerRow key={playerId} playerId={playerId} />
+          ))}
+        </CenteredColumn>
+      )}
+    </CenteredColumn>
   );
 }
 
@@ -65,85 +64,80 @@ function TeamColumn(props: { team: Team; score: number }) {
   const { gameState } = useContext(GameModelContext);
 
   const members = Object.keys(gameState.players).filter(
-    (playerId) => gameState.players[playerId].team === props.team
+    (playerId) =>
+      gameState.players[playerId].team === props.team &&
+      !gameState.players[playerId].isObserver
   );
 
   return (
     <CenteredColumn style={{ alignItems: "flex-start" }}>
       <div>
-        {TeamName(props.team, t)}: <AnimatableScore score={props.score} />{" "}
-        {t("scoreboard.points")}
+        {TeamName(props.team, t)}: <strong>{props.score}</strong> {t("scoreboard.points")}
       </div>
-      {members.map(toPlayerRow)}
+      {members.map((playerId) => (
+        <PlayerRow key={playerId} playerId={playerId} />
+      ))}
     </CenteredColumn>
   );
 }
 
-function AnimatableScore(props: { score: number }) {
-  const lastScore = useRef(props.score);
-
-  useEffect(() => {
-    lastScore.current = props.score;
-  }, [props.score]);
-
-  if (props.score - lastScore.current === 0) {
-    return <span>{props.score}</span>;
-  }
-
-  return (
-    <span style={{ position: "relative" }}>
-      {props.score}
-      <Animate
-        animation="fade-disappear-up"
-        style={{
-          position: "absolute",
-          fontSize: "small",
-          top: -16,
-          right: 0,
-        }}
-      >
-        +{props.score - lastScore.current}
-      </Animate>
-    </span>
-  );
-}
-
-function toPlayerRow(playerId: string) {
-  return <PlayerRow key={playerId} playerId={playerId} />;
-}
-
 function PlayerRow(props: { playerId: string }) {
-  const { gameState, setGameState } = useContext(GameModelContext);
+  const { gameState, localPlayer, submitAction } = useContext(GameModelContext);
   const player = gameState.players[props.playerId];
-  const [hovered, setHovered] = useState(false);
-
-  const iconContainerStyle = {
-    marginLeft: 4,
-    width: 20,
-  };
+  const [expanded, setExpanded] = useState(false);
+  const isCreator = props.playerId === gameState.creatorId;
+  const badges = [
+    player.isModerator ? "M" : null,
+    player.isRepresentative ? "R" : null,
+    player.isObserver ? "O" : null,
+    gameState.psychicIds.includes(props.playerId) ? "P" : null,
+    gameState.viewer.playerId === props.playerId && gameState.viewer.isTemporaryRep ? "T" : null,
+  ].filter(Boolean);
 
   return (
-    <div
-      style={{ marginLeft: 16, display: "flex", flexFlow: "row" }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
-      {player.name}
-      {hovered ? (
-        <div
-          style={{
-            ...iconContainerStyle,
-            cursor: "pointer",
-          }}
-          onClick={() => {
-            delete gameState.players[props.playerId];
-            setGameState(gameState);
-          }}
-        >
-          <FontAwesomeIcon icon={faTimesCircle} />
+    <div style={{ marginLeft: 16, display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
+      <div
+        style={{ cursor: gameState.viewer.canManageRoom ? "pointer" : "default" }}
+        onClick={() => gameState.viewer.canManageRoom && setExpanded(!expanded)}
+      >
+        {player.name} {badges.length > 0 ? `[${badges.join(",")}]` : ""}
+        {isCreator ? " ★" : ""}
+        {localPlayer.id === props.playerId ? " (you)" : ""}
+      </div>
+      {expanded && gameState.viewer.canManageRoom && props.playerId !== localPlayer.id && (
+        <div style={{ display: "flex", flexWrap: "wrap" }}>
+          <Button
+            text={player.isRepresentative ? "Unset rep" : "Make rep"}
+            onClick={() =>
+              submitAction({
+                type: "set_representative",
+                playerId: props.playerId,
+                value: !player.isRepresentative,
+              })
+            }
+          />
+          <Button
+            text={player.isObserver ? "Rejoin" : "Observe"}
+            onClick={() =>
+              submitAction({
+                type: "set_observer",
+                playerId: props.playerId,
+                value: !player.isObserver,
+              })
+            }
+          />
+          <Button
+            text={player.isModerator ? "Demote mod" : "Promote mod"}
+            onClick={() =>
+              submitAction({
+                type: "set_moderator",
+                playerId: props.playerId,
+                value: !player.isModerator,
+              })
+            }
+            disabled={isCreator}
+          />
         </div>
-      ) : (
-        <div style={iconContainerStyle} />
       )}
     </div>
   );

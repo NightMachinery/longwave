@@ -1,11 +1,9 @@
 import {
   buildCanonicalRoomUrl,
   buildMigratedRoomUrl,
-  getOrCreateStoredRoomAuthId,
-  getOrCreateUserAuthToken,
+  getMigrationKey,
   getPlayerNameStorageKey,
   readStoredPlayerName,
-  resolveRoomIdentity,
   writeStoredPlayerName,
 } from "./roomIdentity";
 
@@ -20,64 +18,13 @@ describe("roomIdentity", () => {
     };
   }
 
-  it("creates and reuses a user auth token", () => {
+  it("stores player names by room id", () => {
     const storage = createStorage();
+    const storageKey = getPlayerNameStorageKey("ROOM");
 
-    const firstToken = getOrCreateUserAuthToken(storage);
-    const secondToken = getOrCreateUserAuthToken(storage);
+    writeStoredPlayerName(storage, storageKey, "Alice");
 
-    expect(firstToken).toHaveLength(32);
-    expect(secondToken).toBe(firstToken);
-  });
-
-  it("reuses the same stored room auth id for the same room and user auth token", () => {
-    const storage = createStorage();
-    const userAuthToken = getOrCreateUserAuthToken(storage);
-
-    const firstRoomAuthId = getOrCreateStoredRoomAuthId(
-      storage,
-      "ROOM",
-      userAuthToken
-    );
-    const secondRoomAuthId = getOrCreateStoredRoomAuthId(
-      storage,
-      "ROOM",
-      userAuthToken
-    );
-
-    expect(firstRoomAuthId).toHaveLength(32);
-    expect(secondRoomAuthId).toBe(firstRoomAuthId);
-  });
-
-  it("uses roomAuth query overrides without replacing the stored device identity", () => {
-    const storage = createStorage();
-    const defaultIdentity = resolveRoomIdentity(storage, "ROOM", "");
-
-    const migratedIdentity = resolveRoomIdentity(
-      storage,
-      "ROOM",
-      "?roomAuth=migrated-room-auth"
-    );
-
-    expect(migratedIdentity.effectiveRoomAuthId).toBe("migrated-room-auth");
-    expect(migratedIdentity.storedRoomAuthId).toBe(defaultIdentity.storedRoomAuthId);
-    expect(migratedIdentity.userAuthToken).toBe(defaultIdentity.userAuthToken);
-    expect(migratedIdentity.usesRoomAuthOverride).toBe(true);
-  });
-
-  it("stores player names by the active auth scope", () => {
-    const storage = createStorage();
-    const defaultIdentity = resolveRoomIdentity(storage, "ROOM", "");
-    const migratedIdentity = resolveRoomIdentity(storage, "ROOM", "?roomAuth=shared-room-auth");
-
-    const defaultNameKey = getPlayerNameStorageKey(defaultIdentity);
-    const migratedNameKey = getPlayerNameStorageKey(migratedIdentity);
-
-    writeStoredPlayerName(storage, defaultNameKey, "Alice");
-    writeStoredPlayerName(storage, migratedNameKey, "Bob");
-
-    expect(readStoredPlayerName(storage, defaultNameKey)).toBe("Alice");
-    expect(readStoredPlayerName(storage, migratedNameKey)).toBe("Bob");
+    expect(readStoredPlayerName(storage, storageKey)).toBe("Alice");
   });
 
   it("builds canonical room urls without query parameters", () => {
@@ -86,9 +33,13 @@ describe("roomIdentity", () => {
     );
   });
 
-  it("builds migrated room urls with the roomAuth query parameter", () => {
-    expect(
-      buildMigratedRoomUrl("http://example.com", "ROOM", "shared-room-auth")
-    ).toBe("http://example.com/ROOM?roomAuth=shared-room-auth");
+  it("builds migrated room urls with the migrate query parameter", () => {
+    expect(buildMigratedRoomUrl("http://example.com", "ROOM", "abc123")).toBe(
+      "http://example.com/ROOM?migrate=abc123"
+    );
+  });
+
+  it("reads migration keys from room urls", () => {
+    expect(getMigrationKey("?migrate=abc123")).toBe("abc123");
   });
 });

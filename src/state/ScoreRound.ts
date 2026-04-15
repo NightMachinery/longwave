@@ -2,10 +2,7 @@ import { GameState, RoundPhase, Team } from "./GameState";
 import { GetScore } from "./GetScore";
 
 export function ScoreCoopRound(gameState: GameState): Partial<GameState> {
-  const effectivePointsScored = GetScore(
-    gameState.spectrumTarget,
-    gameState.guess
-  );
+  const effectivePointsScored = GetScore(gameState.spectrumTarget, gameState.guess);
   let finalState: Partial<GameState> = {
     roundPhase: RoundPhase.ViewScore,
   };
@@ -37,14 +34,12 @@ export function ScoreTeamRound(
 
   if (guessingTeam === Team.Right) {
     finalState.rightScore = gameState.rightScore + pointsScored;
-    finalState.leftScore =
-      gameState.leftScore + (wasCounterGuessCorrect ? 1 : 0);
+    finalState.leftScore = gameState.leftScore + (wasCounterGuessCorrect ? 1 : 0);
   }
 
   if (guessingTeam === Team.Left) {
     finalState.leftScore = gameState.leftScore + pointsScored;
-    finalState.rightScore =
-      gameState.rightScore + (wasCounterGuessCorrect ? 1 : 0);
+    finalState.rightScore = gameState.rightScore + (wasCounterGuessCorrect ? 1 : 0);
   }
 
   return finalState;

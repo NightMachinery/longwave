@@ -1,104 +1,39 @@
-import React, { useContext, useState } from "react";
-import { GameType, RoundPhase, TeamName } from "../../state/GameState";
+import React, { useContext } from "react";
+import { GameType, TeamName } from "../../state/GameState";
 import { Spectrum } from "../common/Spectrum";
 import { CenteredColumn } from "../common/LayoutElements";
 import { Button } from "../common/Button";
 import { GameModelContext } from "../../state/GameModelContext";
 import { RecordEvent } from "../../TrackEvent";
-import { ScoreCoopRound } from "../../state/ScoreRound";
-import { copyTextToClipboard } from "../../utils/copyTextToClipboard";
-import { buildCanonicalRoomUrl } from "../../utils/roomIdentity";
-
 import { useTranslation } from "react-i18next";
 
 export function MakeGuess() {
   const { t } = useTranslation();
-  const [copyStatus, setCopyStatus] = useState<"idle" | "success" | "error">(
-    "idle"
-  );
-  const { gameState, localPlayer, clueGiver, spectrumCard, setGameState } =
+  const { gameState, localPlayer, spectrumCard, submitAction } =
     useContext(GameModelContext);
 
-  if (!clueGiver) {
-    return null;
-  }
-
-  const notMyTurn =
-    localPlayer.id === clueGiver.id ||
-    (gameState.gameType === GameType.Teams &&
-      localPlayer.team !== clueGiver.team);
-
-  const guessingTeamString = TeamName(clueGiver.team, t);
-  const inviteUrl = new URL(
-    buildCanonicalRoomUrl(
-      window.location.origin,
-      decodeURIComponent(window.location.pathname.replace(/^\//, ""))
-    )
-  ).toString();
-
-  if (notMyTurn) {
-    return (
-      <div>
-        <Spectrum spectrumCard={spectrumCard} guessingValue={gameState.guess} />
-        <CenteredColumn>
-          <div>
-            {t("makeguess.players_clue", { givername: clueGiver.name })}:{" "}
-            <strong>{gameState.clue}</strong>
-          </div>
-          <div>
-            {t("makeguess.waiting_guessing_team", {
-              guessingteam: guessingTeamString,
-            })}
-          </div>
-          {Object.keys(gameState.players).length < 2 && (
-            <div
-              style={{
-                margin: 12,
-                padding: "0 1em",
-                border: "1px solid black",
-              }}
-            >
-              <p>{t("makeguess.invite_other_players")}</p>
-              <p>
-                {t("makeguess.share_game_url", {
-                  game_url: inviteUrl,
-                })}
-              </p>
-              <Button
-                text={t("makeguess.copy_game_url")}
-                onClick={() => {
-                  void copyTextToClipboard(inviteUrl).then((copied) => {
-                    setCopyStatus(copied ? "success" : "error");
-                  });
-                }}
-              />
-              {copyStatus === "success" && (
-                <p>{t("makeguess.copy_success")}</p>
-              )}
-              {copyStatus === "error" && <p>{t("makeguess.copy_failed")}</p>}
-            </div>
-          )}
-        </CenteredColumn>
-      </div>
-    );
-  }
+  const waitingText =
+    gameState.gameType === GameType.Teams
+      ? t("makeguess.waiting_guessing_team", {
+          guessingteam: TeamName(gameState.actingTeam, t),
+        })
+      : t("makeguess.waiting_guessing_team", { guessingteam: t("gamestate.the_player") });
 
   return (
     <div>
       <Spectrum
         spectrumCard={spectrumCard}
         handleValue={gameState.guess}
+        guessingValue={!gameState.viewer.canSetGuess ? gameState.guess : undefined}
         onChange={(guess: number) => {
-          setGameState({
-            guess,
-          });
+          if (gameState.viewer.canSetGuess) {
+            submitAction({ type: "set_guess", guess });
+          }
         }}
       />
       <CenteredColumn>
-        <div>
-          {t("makeguess.players_clue", { givername: clueGiver.name })}:{" "}
-          <strong>{gameState.clue}</strong>
-        </div>
+        <ClueList />
+        {!gameState.viewer.canSubmitGuess && <div>{waitingText}</div>}
         <div>
           <Button
             text={t("makeguess.guess_for_team", {
@@ -106,27 +41,32 @@ export function MakeGuess() {
             })}
             onClick={() => {
               RecordEvent("guess_submitted", {
-                spectrum_card: spectrumCard.join("|"),
-                clue: gameState.clue,
+                clue_count: gameState.clues.length.toString(),
                 target: gameState.spectrumTarget.toString(),
                 guess: gameState.guess.toString(),
               });
-
-              if (gameState.gameType === GameType.Teams) {
-                setGameState({
-                  roundPhase: RoundPhase.CounterGuess,
-                });
-              } else if (gameState.gameType === GameType.Cooperative) {
-                setGameState(ScoreCoopRound(gameState));
-              } else {
-                setGameState({
-                  roundPhase: RoundPhase.ViewScore,
-                });
-              }
+              submitAction({ type: "submit_guess" });
             }}
+            disabled={!gameState.viewer.canSubmitGuess}
           />
         </div>
       </CenteredColumn>
+    </div>
+  );
+}
+
+function ClueList() {
+  const { t } = useTranslation();
+  const { gameState } = useContext(GameModelContext);
+
+  return (
+    <div>
+      <div>{t("makeguess.clues", "Clues")}</div>
+      {gameState.clues.map((clue) => (
+        <div key={`${clue.authorId}-${clue.order}`}>
+          <strong>{clue.authorName}</strong>: {clue.text}
+        </div>
+      ))}
     </div>
   );
 }

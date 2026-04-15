@@ -1,86 +1,71 @@
-import React from "react";
-import { CenteredRow, CenteredColumn } from "../common/LayoutElements";
+import React, { useContext } from "react";
 import { RoundPhase, Team, TeamName } from "../../state/GameState";
+import { CenteredColumn, CenteredRow } from "../common/LayoutElements";
 import { Button } from "../common/Button";
-import { LongwaveAppTitle } from "../common/Title";
-import { useContext } from "react";
 import { GameModelContext } from "../../state/GameModelContext";
-import { NewTeamGame } from "../../state/NewGame";
-
 import { useTranslation } from "react-i18next";
 
 export function JoinTeam() {
   const { t } = useTranslation();
-  const cardsTranslation = useTranslation("spectrum-cards");
-  const { gameState, localPlayer, setGameState } = useContext(GameModelContext);
+  const { gameState, localPlayer, submitAction } = useContext(GameModelContext);
 
   const leftTeam = Object.keys(gameState.players).filter(
-    (playerId) => gameState.players[playerId].team === Team.Left
+    (playerId) =>
+      gameState.players[playerId].team === Team.Left &&
+      !gameState.players[playerId].isObserver
   );
   const rightTeam = Object.keys(gameState.players).filter(
-    (playerId) => gameState.players[playerId].team === Team.Right
+    (playerId) =>
+      gameState.players[playerId].team === Team.Right &&
+      !gameState.players[playerId].isObserver
   );
 
-  const joinTeam = (team: Team) => {
-    setGameState({
-      players: {
-        ...gameState.players,
-        [localPlayer.id]: {
-          ...localPlayer,
-          team,
-        },
-      },
-    });
-  };
-
-  const startGame = () =>
-    setGameState(
-      NewTeamGame(
-        gameState.players,
-        localPlayer.id,
-        gameState,
-        cardsTranslation.t
-      )
-    );
+  const joinTeam = (team: Team) => submitAction({ type: "join_team", team });
 
   return (
     <CenteredColumn>
-      <LongwaveAppTitle />
       <div>{t("jointeam.join_team")}:</div>
-      <CenteredRow
-        style={{
-          alignItems: "flex-start",
-          alignSelf: "stretch",
-        }}
-      >
-        <CenteredColumn>
-          <div>{TeamName(Team.Left, t)}</div>
-          {leftTeam.map((playerId) => (
-            <div key={playerId}>{gameState.players[playerId].name}</div>
-          ))}
-          <div>
-            <Button
-              text={t("jointeam.join_left")}
-              onClick={() => joinTeam(Team.Left)}
-            />
-          </div>
-        </CenteredColumn>
-        <CenteredColumn>
-          <div>{TeamName(Team.Right, t)}</div>
-          {rightTeam.map((playerId) => (
-            <div key={playerId}>{gameState.players[playerId].name}</div>
-          ))}
-          <div>
-            <Button
-              text={t("jointeam.join_right")}
-              onClick={() => joinTeam(Team.Right)}
-            />
-          </div>
-        </CenteredColumn>
+      <CenteredRow style={{ alignItems: "flex-start", width: "100%" }}>
+        <TeamPane
+          title={TeamName(Team.Left, t)}
+          members={leftTeam.map((playerId) => gameState.players[playerId].name)}
+          buttonText={t("jointeam.join_left")}
+          onJoin={() => joinTeam(Team.Left)}
+          disabled={!gameState.viewer.canChangeTeam || localPlayer.isObserver}
+        />
+        <TeamPane
+          title={TeamName(Team.Right, t)}
+          members={rightTeam.map((playerId) => gameState.players[playerId].name)}
+          buttonText={t("jointeam.join_right")}
+          onJoin={() => joinTeam(Team.Right)}
+          disabled={!gameState.viewer.canChangeTeam || localPlayer.isObserver}
+        />
       </CenteredRow>
       {gameState.roundPhase === RoundPhase.PickTeams && (
-        <Button text={t("jointeam.start_game")} onClick={startGame} />
+        <Button
+          text={t("jointeam.start_game")}
+          onClick={() => submitAction({ type: "start_round" })}
+          disabled={!gameState.viewer.canStartRound}
+        />
       )}
+    </CenteredColumn>
+  );
+}
+
+function TeamPane(props: {
+  title: string;
+  members: string[];
+  buttonText: string;
+  onJoin: () => void;
+  disabled: boolean;
+}) {
+  return (
+    <CenteredColumn style={{ alignItems: "flex-start", minWidth: 160 }}>
+      <div>{props.title}</div>
+      {props.members.map((member) => (
+        <div key={member}>{member}</div>
+      ))}
+      <Button text={props.buttonText} onClick={props.onJoin} disabled={props.disabled} />
     </CenteredColumn>
   );
 }

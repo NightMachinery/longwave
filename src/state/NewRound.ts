@@ -1,38 +1,7 @@
-import { RoundPhase, GameState } from "./GameState";
-import { RandomSpectrumTarget } from "./RandomSpectrumTarget";
-import { BuildGameModel } from "./BuildGameModel";
-import { TFunction } from "i18next";
+import { GameState } from "./GameState";
 
-export function NewRound(
-  playerId: string,
-  gameState: GameState,
-  tSpectrumCards: TFunction<"spectrum-cards">
-): Partial<GameState> {
-  const gameModel = BuildGameModel(
-    gameState,
-    () => {},
-    playerId,
-    tSpectrumCards,
-    () => {}
-  );
-
-  const newState: Partial<GameState> = {
-    clueGiver: playerId,
-    roundPhase: RoundPhase.GiveClue,
+export function NewRound(_playerId: string, gameState: GameState): Partial<GameState> {
+  return {
     deckIndex: gameState.deckIndex + 1,
-    turnsTaken: gameState.turnsTaken + 1,
-    spectrumTarget: RandomSpectrumTarget(),
   };
-
-  if (gameModel.clueGiver !== null) {
-    newState.previousTurn = {
-      spectrumCard: gameModel.spectrumCard,
-      spectrumTarget: gameState.spectrumTarget,
-      clueGiverName: gameModel.clueGiver.name,
-      clue: gameState.clue,
-      guess: gameState.guess,
-    };
-  }
-
-  return newState;
 }

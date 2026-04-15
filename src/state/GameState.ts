@@ -1,4 +1,3 @@
-import { RandomSpectrumTarget } from "./RandomSpectrumTarget";
 import { RandomFourCharacterString } from "./RandomFourCharacterString";
 import { TFunction } from "i18next";
 
@@ -43,19 +42,46 @@ export function TeamName(team: Team, t: TFunction<string>) {
   return t("gamestate.the_player");
 }
 
+export type PlayerState = {
+  name: string;
+  team: Team;
+  isModerator: boolean;
+  isRepresentative: boolean;
+  isObserver: boolean;
+};
+
 export type PlayersTeams = {
-  [playerId: string]: {
-    name: string;
-    team: Team;
-  };
+  [playerId: string]: PlayerState;
+};
+
+export type Clue = {
+  authorId: string;
+  authorName: string;
+  text: string;
+  order: number;
 };
 
 export type TurnSummaryModel = {
-  spectrumCard: [string, string];
-  clueGiverName: string;
-  clue: string;
+  deckIndex: number;
+  clueAuthorName: string;
+  clues: Clue[];
   spectrumTarget: number;
   guess: number;
+};
+
+export type ViewerState = {
+  playerId: string;
+  canManageRoom: boolean;
+  canSetGuess: boolean;
+  canSubmitGuess: boolean;
+  canSubmitCounterGuess: boolean;
+  canSubmitClue: boolean;
+  canStartRound: boolean;
+  canChangeTeam: boolean;
+  effectiveClueQuota: number;
+  submittedClueCount: number;
+  isCurrentPsychic: boolean;
+  isTemporaryRep: boolean;
 };
 
 export interface GameState {
@@ -65,17 +91,22 @@ export interface GameState {
   deckSeed: string;
   deckIndex: number;
   spectrumTarget: number;
-  clue: string;
+  clues: Clue[];
   guess: number;
   counterGuess: "left" | "right";
   players: PlayersTeams;
-  clueGiver: string;
+  psychicIds: string[];
+  actingTeam: Team;
   leftScore: number;
   rightScore: number;
   coopScore: number;
   coopBonusTurns: number;
   previousTurn: TurnSummaryModel | null;
   deckLanguage: string | null;
+  creatorId: string;
+  psychicCount: number;
+  clueQuota: number;
+  viewer: ViewerState;
 }
 
 export function InitialGameState(deckLanguage: string = "en"): GameState {
@@ -85,17 +116,35 @@ export function InitialGameState(deckLanguage: string = "en"): GameState {
     turnsTaken: -1,
     deckSeed: RandomFourCharacterString(),
     deckIndex: 0,
-    spectrumTarget: RandomSpectrumTarget(),
-    clue: "",
-    guess: 0,
+    spectrumTarget: 0,
+    clues: [],
+    guess: 10,
     counterGuess: "left",
     players: {},
-    clueGiver: "",
+    psychicIds: [],
+    actingTeam: Team.Unset,
     leftScore: 0,
     rightScore: 0,
     coopScore: 0,
     coopBonusTurns: 0,
     previousTurn: null,
-    deckLanguage: deckLanguage,
+    deckLanguage,
+    creatorId: "",
+    psychicCount: 1,
+    clueQuota: 1,
+    viewer: {
+      playerId: "",
+      canManageRoom: false,
+      canSetGuess: false,
+      canSubmitGuess: false,
+      canSubmitCounterGuess: false,
+      canSubmitClue: false,
+      canStartRound: false,
+      canChangeTeam: false,
+      effectiveClueQuota: 1,
+      submittedClueCount: 0,
+      isCurrentPsychic: false,
+      isTemporaryRep: false,
+    },
   };
 }

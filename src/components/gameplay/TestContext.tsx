@@ -1,23 +1,40 @@
 import { ReactChild, Suspense } from "react";
-import { GameState } from "../../state/GameState";
+import { GameState, InitialGameState } from "../../state/GameState";
 import { BuildGameModel } from "../../state/BuildGameModel";
 import { GameModelContext } from "../../state/GameModelContext";
 import { I18nextProvider } from "react-i18next";
 import i18n from "./i18nForTests";
+import { RoomAction } from "../../network/roomApi";
+
+const testSpectrumCards = ((key: string) => {
+  if (key === "basic" || key === "advanced") {
+    return [["left", "right"]];
+  }
+  return [];
+}) as any;
 
 export function TestContext(props: {
-  gameState: GameState;
+  gameState: Partial<GameState>;
   playerId: string;
   children: ReactChild;
-  setState?: (newState: Partial<GameState>) => void;
+  submitAction?: (action: RoomAction) => void;
 }) {
+  const mergedGameState: GameState = {
+    ...InitialGameState("en"),
+    ...props.gameState,
+    viewer: {
+      ...InitialGameState("en").viewer,
+      ...props.gameState.viewer,
+      playerId: props.playerId,
+    },
+  };
+
   return (
     <GameModelContext.Provider
       value={BuildGameModel(
-        props.gameState,
-        props.setState || jest.fn(),
-        props.playerId,
-        () => ["left", "right"] as any,
+        mergedGameState,
+        props.submitAction || jest.fn(),
+        testSpectrumCards,
         () => {}
       )}
     >

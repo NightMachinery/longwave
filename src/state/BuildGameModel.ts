@@ -1,6 +1,7 @@
 import { GameState, Team } from "./GameState";
 import memoize from "lodash/memoize";
 import { TFunction } from "i18next";
+import { RoomAction } from "../network/roomApi";
 
 const shuffleSeed: {
   shuffle: <T>(arr: T[], seed: string) => T[];
@@ -10,14 +11,18 @@ type Player = {
   id: string;
   name: string;
   team: Team;
+  isModerator: boolean;
+  isRepresentative: boolean;
+  isObserver: boolean;
 };
 
 export interface GameModel {
   gameState: GameState;
   localPlayer: Player;
-  clueGiver: Player | null;
+  psychics: Player[];
   spectrumCard: [string, string];
-  setGameState: (newState: Partial<GameState>) => void;
+  previousSpectrumCard: [string, string] | null;
+  submitAction: (action: RoomAction) => void;
   setPlayerName: (newName: string) => void;
 }
 
@@ -25,20 +30,11 @@ const getSeededDeck = memoize((seed: string, cards: [string, string][]) =>
   shuffleSeed.shuffle(cards, seed)
 );
 
-export function BuildGameModel(
-  gameState: GameState,
-  setGameState: (newState: Partial<GameState>) => void,
-  localPlayerId: string,
-  tSpectrumCards: TFunction<"spectrum-cards">,
-  setPlayerName: (newName: string) => void
-): GameModel {
-  const clueGiver = gameState.players[gameState.clueGiver]
-    ? {
-        ...gameState.players[gameState.clueGiver],
-        id: gameState.clueGiver,
-      }
-    : null;
-
+function getCardAtIndex(
+  seed: string,
+  deckIndex: number,
+  tSpectrumCards: TFunction<"spectrum-cards">
+): [string, string] {
   type SpectrumCard = [string, string];
   const basicCards = tSpectrumCards("basic", {
     returnObjects: true,
@@ -46,18 +42,56 @@ export function BuildGameModel(
   const advancedCards = tSpectrumCards("advanced", {
     returnObjects: true,
   }) as SpectrumCard[];
-  const AllCards = [...basicCards, ...advancedCards];
-  const spectrumDeck = getSeededDeck(gameState.deckSeed, AllCards);
+  const allCards = [...basicCards, ...advancedCards];
+  const spectrumDeck = getSeededDeck(seed, allCards);
+  return spectrumDeck[deckIndex % spectrumDeck.length];
+}
+
+export function BuildGameModel(
+  gameState: GameState,
+  submitAction: (action: RoomAction) => void,
+  tSpectrumCards: TFunction<"spectrum-cards">,
+  setPlayerName: (newName: string) => void
+): GameModel {
+  const localPlayerState = gameState.players[gameState.viewer.playerId] || {
+    name: "Player",
+    team: Team.Unset,
+    isModerator: false,
+    isRepresentative: false,
+    isObserver: false,
+  };
+  const localPlayer: Player = {
+    id: gameState.viewer.playerId,
+    ...localPlayerState,
+  };
 
   return {
     gameState,
-    localPlayer: {
-      ...gameState.players[localPlayerId],
-      id: localPlayerId,
-    },
-    clueGiver,
-    spectrumCard: spectrumDeck[gameState.deckIndex % spectrumDeck.length],
-    setGameState,
+    localPlayer,
+    psychics: gameState.psychicIds
+      .map((id) =>
+        gameState.players[id]
+          ? {
+              id,
+              ...gameState.players[id],
+            }
+          : null
+      )
+      .filter((player): player is Player => player !== null),
+    spectrumCard: getCardAtIndex(
+      gameState.deckSeed,
+      gameState.deckIndex,
+      tSpectrumCards
+    ),
+    previousSpectrumCard:
+      gameState.previousTurn === null
+        ? null
+        : getCardAtIndex(
+            gameState.deckSeed,
+            gameState.previousTurn.deckIndex,
+            tSpectrumCards
+          ),
+    submitAction,
     setPlayerName,
   };
 }

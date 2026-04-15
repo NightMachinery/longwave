@@ -6,18 +6,27 @@ import { GameModelContext } from "../../state/GameModelContext";
 import { InitialGameState, Team } from "../../state/GameState";
 import { RoomMenu } from "./RoomIdHeader";
 import { copyTextToClipboard } from "../../utils/copyTextToClipboard";
+import { requestMigrationLink } from "../../network/roomApi";
 
 jest.mock("../../utils/copyTextToClipboard", () => ({
   copyTextToClipboard: jest.fn(),
+}));
+
+jest.mock("../../network/roomApi", () => ({
+  requestMigrationLink: jest.fn(),
 }));
 
 describe("RoomMenu", () => {
   const mockedCopyTextToClipboard = copyTextToClipboard as jest.MockedFunction<
     typeof copyTextToClipboard
   >;
+  const mockedRequestMigrationLink = requestMigrationLink as jest.MockedFunction<
+    typeof requestMigrationLink
+  >;
 
   beforeEach(() => {
     mockedCopyTextToClipboard.mockResolvedValue(true);
+    mockedRequestMigrationLink.mockResolvedValue("http://localhost/ROOM?migrate=abc123");
   });
 
   afterEach(() => {
@@ -29,15 +38,35 @@ describe("RoomMenu", () => {
     return render(
       <GameModelContext.Provider
         value={{
-          gameState: InitialGameState("en"),
+          gameState: {
+            ...InitialGameState("en"),
+            viewer: {
+              ...InitialGameState("en").viewer,
+              playerId: "player-id",
+              canManageRoom: true,
+            },
+            players: {
+              "player-id": {
+                name: "Player",
+                team: Team.Unset,
+                isModerator: true,
+                isRepresentative: false,
+                isObserver: false,
+              },
+            },
+          },
           localPlayer: {
             id: "player-id",
             name: "Player",
             team: Team.Unset,
+            isModerator: true,
+            isRepresentative: false,
+            isObserver: false,
           },
-          clueGiver: null,
+          psychics: [],
           spectrumCard: ["left", "right"],
-          setGameState: jest.fn(),
+          previousSpectrumCard: null,
+          submitAction: jest.fn(),
           setPlayerName: jest.fn(),
         }}
       >
@@ -51,7 +80,6 @@ describe("RoomMenu", () => {
   }
 
   it("copies the canonical room url without migration parameters", async () => {
-    window.history.replaceState({}, "", "/ROOM?roomAuth=shared-room-auth");
     const component = renderRoomMenu();
 
     fireEvent.click(component.getByText("Copy room link"));
@@ -61,20 +89,18 @@ describe("RoomMenu", () => {
         "http://localhost/ROOM"
       );
     });
-    expect(component.getByText("Room link copied.")).not.toBeNull();
   });
 
-  it("copies a migrated room url using the active room auth id", async () => {
-    window.history.replaceState({}, "", "/ROOM?roomAuth=shared-room-auth");
+  it("copies a migrated room url using the server-generated token", async () => {
     const component = renderRoomMenu();
 
     fireEvent.click(component.getByText("Migrate device"));
 
     await waitFor(() => {
+      expect(mockedRequestMigrationLink).toHaveBeenCalledWith("ROOM");
       expect(mockedCopyTextToClipboard).toHaveBeenCalledWith(
-        "http://localhost/ROOM?roomAuth=shared-room-auth"
+        "http://localhost/ROOM?migrate=abc123"
       );
     });
-    expect(component.getByText("Migration link copied.")).not.toBeNull();
   });
 });

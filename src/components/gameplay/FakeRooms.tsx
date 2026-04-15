@@ -11,6 +11,7 @@ import {
   RoundPhase,
 } from "../../state/GameState";
 import { useTranslation } from "react-i18next";
+import { RoomAction } from "../../network/roomApi";
 
 export function FakeRooms() {
   const cardsTranslation = useTranslation("spectrum-cards");
@@ -19,31 +20,45 @@ export function FakeRooms() {
     ...InitialGameState(cardsTranslation.i18n.language),
     gameType: GameType.Teams,
     roundPhase: RoundPhase.PickTeams,
+    viewer: {
+      ...InitialGameState().viewer,
+      playerId: "ul",
+      canManageRoom: true,
+      canChangeTeam: true,
+    },
     players: {
       ul: {
         name: "Upper Left",
         team: Team.Left,
+        isModerator: true,
+        isRepresentative: false,
+        isObserver: false,
       },
       ll: {
         name: "Lower Left",
         team: Team.Left,
+        isModerator: false,
+        isRepresentative: false,
+        isObserver: false,
       },
       ur: {
         name: "Upper Right",
         team: Team.Right,
+        isModerator: false,
+        isRepresentative: false,
+        isObserver: false,
       },
       lr: {
         name: "Lower Right",
         team: Team.Right,
+        isModerator: false,
+        isRepresentative: false,
+        isObserver: false,
       },
     },
   });
 
-  const setPartialGameState = (newState: Partial<GameState>) =>
-    setGameState({
-      ...gameState,
-      ...newState,
-    });
+  const submitAction = (_action: RoomAction) => setGameState(gameState);
 
   const style: React.CSSProperties = {
     width: 500,
@@ -56,9 +71,14 @@ export function FakeRooms() {
     <div style={style}>
       <GameModelContext.Provider
         value={BuildGameModel(
-          gameState,
-          setPartialGameState,
-          playerId,
+          {
+            ...gameState,
+            viewer: {
+              ...gameState.viewer,
+              playerId,
+            },
+          },
+          submitAction,
           cardsTranslation.t,
           () => {}
         )}

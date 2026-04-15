@@ -8,11 +8,10 @@ import { BuildGameModel } from "../../state/BuildGameModel";
 import { RoomIdHeader } from "../common/RoomIdHeader";
 import { FakeRooms } from "./FakeRooms";
 import { useTranslation } from "react-i18next";
-import { Team } from "../../state/GameState";
 import {
+  getMigrationKey,
   getPlayerNameStorageKey,
   readStoredPlayerName,
-  resolveRoomIdentity,
   writeStoredPlayerName,
 } from "../../utils/roomIdentity";
 
@@ -23,14 +22,8 @@ export function GameRoom() {
     throw new Error("RoomId missing");
   }
 
-  const roomIdentity = useMemo(
-    () => resolveRoomIdentity(localStorage, roomId, location.search),
-    [location.search, roomId]
-  );
-  const playerNameStorageKey = useMemo(
-    () => getPlayerNameStorageKey(roomIdentity),
-    [roomIdentity]
-  );
+  const migrationKey = useMemo(() => getMigrationKey(location.search), [location.search]);
+  const playerNameStorageKey = useMemo(() => getPlayerNameStorageKey(roomId), [roomId]);
   const [playerName, setPlayerNameState] = useState(() =>
     readStoredPlayerName(localStorage, playerNameStorageKey)
   );
@@ -47,83 +40,40 @@ export function GameRoom() {
     [playerNameStorageKey]
   );
 
-  const [gameState, setGameState] = useNetworkBackedGameState(
+  const [gameState, submitAction] = useNetworkBackedGameState({
     roomId,
-    roomIdentity.effectiveRoomAuthId,
-    playerName
-  );
+    playerName,
+    migrationKey,
+  });
   const cardsTranslation = useTranslation("spectrum-cards");
 
   useEffect(() => {
     const syncedPlayerName =
-      gameState.players[roomIdentity.effectiveRoomAuthId]?.name ?? "";
+      gameState?.players?.[gameState.viewer.playerId]?.name ?? "";
 
     if (syncedPlayerName.length > 0 && syncedPlayerName !== playerName) {
       setPlayerName(syncedPlayerName);
     }
-  }, [
-    gameState.players,
-    playerName,
-    roomIdentity.effectiveRoomAuthId,
-    setPlayerName,
-  ]);
-
-  useEffect(() => {
-    const searchParams = new URLSearchParams(location.search);
-    if (!searchParams.get("rocketcrab")) {
-      return;
-    }
-
-    const rocketcrabPlayerName = searchParams.get("name");
-    if (rocketcrabPlayerName !== null && rocketcrabPlayerName !== playerName) {
-      setPlayerName(rocketcrabPlayerName);
-    }
-  }, [location.search, playerName, setPlayerName]);
-
-  if (
-    gameState.deckLanguage !== null &&
-    cardsTranslation.i18n.language !== gameState.deckLanguage
-  ) {
-    cardsTranslation.i18n.changeLanguage(gameState.deckLanguage);
-    return null;
-  }
+  }, [gameState, playerName, setPlayerName]);
 
   if (roomId === "MULTIPLAYER_TEST") {
     return <FakeRooms />;
   }
 
+  if (playerName.length === 0 && migrationKey === null) {
+    return <InputName setName={setPlayerName} />;
+  }
+
+  if (!gameState) {
+    return null;
+  }
+
   const gameModel = BuildGameModel(
     gameState,
-    setGameState,
-    roomIdentity.effectiveRoomAuthId,
+    submitAction,
     cardsTranslation.t,
     setPlayerName
   );
-
-  if (playerName.length === 0) {
-    return (
-      <InputName
-        setName={(name) => {
-          setPlayerName(name);
-          setGameState({
-            players: {
-              ...gameState.players,
-              [roomIdentity.effectiveRoomAuthId]: {
-                name,
-                team:
-                  gameState.players[roomIdentity.effectiveRoomAuthId]?.team ??
-                  Team.Unset,
-              },
-            },
-          });
-        }}
-      />
-    );
-  }
-
-  if (!gameState?.players?.[roomIdentity.effectiveRoomAuthId]) {
-    return null;
-  }
 
   return (
     <GameModelContext.Provider value={gameModel}>

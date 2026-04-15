@@ -3,26 +3,14 @@ import { GetScore } from "../../state/GetScore";
 import { CenteredColumn, CenteredRow } from "../common/LayoutElements";
 import { Spectrum } from "../common/Spectrum";
 import { Button } from "../common/Button";
-import {
-  GameType,
-  Team,
-  InitialGameState,
-  TeamName,
-  TeamReverse,
-} from "../../state/GameState";
+import { GameType, Team, TeamName, TeamReverse } from "../../state/GameState";
 import { GameModelContext } from "../../state/GameModelContext";
-import { NewRound } from "../../state/NewRound";
 import { Info } from "../common/Info";
-
 import { Trans, useTranslation } from "react-i18next";
 
 export function ViewScore() {
   const { t } = useTranslation();
-  const { gameState, clueGiver, spectrumCard } = useContext(GameModelContext);
-
-  if (!clueGiver) {
-    return null;
-  }
+  const { gameState, spectrumCard } = useContext(GameModelContext);
 
   let score = GetScore(gameState.spectrumTarget, gameState.guess);
   let bonusCoopTurn = false;
@@ -45,17 +33,17 @@ export function ViewScore() {
         targetValue={gameState.spectrumTarget}
       />
       <CenteredColumn>
-        <div>
-          {t("viewscore.player_clue", { givername: clueGiver.name })}:{" "}
-          <strong>{gameState.clue}</strong>
-        </div>
+        {gameState.clues.map((clue) => (
+          <div key={`${clue.authorId}-${clue.order}`}>
+            <strong>{clue.authorName}</strong>: {clue.text}
+          </div>
+        ))}
         <div>
           {t("viewscore.score")}: {score} {t("viewscore.points")}!
         </div>
         {gameState.gameType === GameType.Teams && (
           <div>
-            {TeamName(TeamReverse(clueGiver.team), t)} {t("viewscore.got")}{" "}
-            {wasCounterGuessCorrect
+            {TeamName(TeamReverse(gameState.actingTeam), t)} {t("viewscore.got")} {wasCounterGuessCorrect
               ? t("viewscore.1_point_correct_guess")
               : t("viewscore.0_point_wrong_guess")}
           </div>
@@ -75,51 +63,15 @@ export function ViewScore() {
 }
 
 function NextTurnOrEndGame() {
-  const { t, i18n } = useTranslation();
-  const cardsTranslation = useTranslation("spectrum-cards");
-  const { gameState, localPlayer, clueGiver, setGameState } =
-    useContext(GameModelContext);
-
-  if (!clueGiver) {
-    return null;
-  }
-
-  const resetButton = (
-    <Button
-      text={t("viewscore.reset_game")}
-      onClick={() => {
-        setGameState({
-          ...InitialGameState(i18n.language),
-          deckSeed: gameState.deckSeed,
-          deckIndex: gameState.deckIndex,
-        });
-      }}
-    />
-  );
+  const { t } = useTranslation();
+  const { gameState, submitAction } = useContext(GameModelContext);
 
   if (gameState.leftScore >= 10 && gameState.leftScore > gameState.rightScore) {
-    return (
-      <>
-        <div>
-          {t("viewscore.winning_team", { winnerteam: TeamName(Team.Left, t) })}
-        </div>
-        {resetButton}
-      </>
-    );
+    return <div>{t("viewscore.winning_team", { winnerteam: TeamName(Team.Left, t) })}</div>;
   }
 
-  if (
-    gameState.rightScore >= 10 &&
-    gameState.rightScore > gameState.leftScore
-  ) {
-    return (
-      <>
-        <div>
-          {t("viewscore.winning_team", { winnerteam: TeamName(Team.Right, t) })}
-        </div>
-        {resetButton}
-      </>
-    );
+  if (gameState.rightScore >= 10 && gameState.rightScore > gameState.leftScore) {
+    return <div>{t("viewscore.winning_team", { winnerteam: TeamName(Team.Right, t) })}</div>;
   }
 
   if (
@@ -130,20 +82,14 @@ function NextTurnOrEndGame() {
       <>
         <div>{t("viewscore.game_finished")}</div>
         <div>
-          {t("viewscore.final_score_team")}:{" "}
-          <strong>
-            {gameState.coopScore} {t("viewscore.points")}
-          </strong>
+          {t("viewscore.final_score_team")}: <strong>{gameState.coopScore} {t("viewscore.points")}</strong>
         </div>
-        {resetButton}
       </>
     );
   }
 
   const score = GetScore(gameState.spectrumTarget, gameState.guess);
-
-  const scoringTeamString = TeamName(clueGiver.team, t);
-
+  const scoringTeamString = TeamName(gameState.actingTeam, t);
   let bonusTurn = false;
 
   const nextTeam = (() => {
@@ -152,56 +98,34 @@ function NextTurnOrEndGame() {
     }
 
     if (score === 4) {
-      if (
-        gameState.leftScore < gameState.rightScore &&
-        clueGiver.team === Team.Left
-      ) {
+      if (gameState.leftScore < gameState.rightScore && gameState.actingTeam === Team.Left) {
         bonusTurn = true;
         return Team.Left;
       }
-      if (
-        gameState.rightScore < gameState.leftScore &&
-        clueGiver.team === Team.Right
-      ) {
+      if (gameState.rightScore < gameState.leftScore && gameState.actingTeam === Team.Right) {
         bonusTurn = true;
         return Team.Right;
       }
     }
 
-    return TeamReverse(clueGiver.team);
-  })();
-
-  const eligibleToDraw = (() => {
-    if (clueGiver.id === localPlayer.id) {
-      return false;
-    }
-
-    if (gameState.gameType !== GameType.Teams) {
-      return true;
-    }
-
-    return localPlayer.team === nextTeam;
+    return TeamReverse(gameState.actingTeam);
   })();
 
   return (
     <>
       {bonusTurn && (
         <CenteredRow>
-          <div>
-            {t("viewscore.catching_up", { scoringteam: scoringTeamString })}
-          </div>
+          <div>{t("viewscore.catching_up", { scoringteam: scoringTeamString })}</div>
           <Info>{t("viewscore.catching_up_info") as string}</Info>
         </CenteredRow>
       )}
-      {eligibleToDraw && (
-        <Button
-          text={t("viewscore.draw_next_card")}
-          onClick={() =>
-            setGameState(
-              NewRound(localPlayer.id, gameState, cardsTranslation.t)
-            )
-          }
-        />
+      <Button
+        text={t("viewscore.draw_next_card")}
+        onClick={() => submitAction({ type: "start_round" })}
+        disabled={!gameState.viewer.canStartRound}
+      />
+      {gameState.gameType === GameType.Teams && nextTeam !== Team.Unset && (
+        <div>{t("viewscore.next_team", "Next team")}: {TeamName(nextTeam, t)}</div>
       )}
     </>
   );

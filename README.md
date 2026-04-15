@@ -19,6 +19,8 @@ The first team to score 10 points wins.
 
 For a mode-by-mode explanation of Standard (Teams), Cooperative, and Free Play, see `docs/modes/README.md`.
 
+For the new moderator / representative / observer / psychic behavior and the secure migration flow, see `docs/roles.md`.
+
 ## Translations
 
 To add a new translation, follow these steps:
@@ -90,11 +92,11 @@ That flow replaces the old Firebase runtime dependency with a local Go + SQLite 
 
 ## Room identity and sharing
 
-- Each browser/device gets its own persistent local auth token.
-- Each room maps that device token to an opaque room-specific auth id used as the player identity inside that room.
+- Each room now uses a server-issued room session cookie.
+- The first player to join a room becomes the creator and an initial moderator.
 - **Copy room link** shares the clean room URL only.
-- **Migrate device** copies a room-specific link with `?roomAuth=...` so another device can join as the same in-room identity without exposing the device's stored auth token.
-- The migrated link remains refresh-safe because it keeps the room-specific auth id in the URL.
+- **Migrate device** requests a one-time migration link with `?migrate=...` so another device can take over the same in-room identity.
+- Hidden round information is filtered by the backend so only current psychics see the target during clueing.
 
 ### Available Scripts
 

@@ -8,13 +8,17 @@ export const GameModelContext = createContext<GameModel>({
     id: "localPlayer",
     name: "Player",
     team: Team.Unset,
+    isModerator: false,
+    isRepresentative: false,
+    isObserver: false,
   },
-  clueGiver: null,
+  psychics: [],
   spectrumCard: ["left", "right"],
-  setGameState: (newState) => {
+  previousSpectrumCard: null,
+  submitAction: (action) => {
     console.warn(
-      "GameModelContext not provided. Got setGameState: " +
-        JSON.stringify(newState)
+      "GameModelContext not provided. Got submitAction: " +
+        JSON.stringify(action)
     );
   },
   setPlayerName: () => {},

@@ -4,47 +4,37 @@ import "sync"
 
 type RoomHub struct {
 	mu          sync.RWMutex
-	subscribers map[string]map[chan []byte]struct{}
+	subscribers map[string]map[chan struct{}]struct{}
 }
 
 func NewRoomHub() *RoomHub {
-	return &RoomHub{
-		subscribers: map[string]map[chan []byte]struct{}{},
-	}
+	return &RoomHub{subscribers: map[string]map[chan struct{}]struct{}{}}
 }
 
-func (hub *RoomHub) Subscribe(roomID string) (<-chan []byte, func()) {
-	events := make(chan []byte, 8)
-
+func (hub *RoomHub) Subscribe(roomID string) (<-chan struct{}, func()) {
+	events := make(chan struct{}, 8)
 	hub.mu.Lock()
 	if hub.subscribers[roomID] == nil {
-		hub.subscribers[roomID] = map[chan []byte]struct{}{}
+		hub.subscribers[roomID] = map[chan struct{}]struct{}{}
 	}
 	hub.subscribers[roomID][events] = struct{}{}
 	hub.mu.Unlock()
-
-	return events, func() {
-		hub.unsubscribe(roomID, events)
-	}
+	return events, func() { hub.unsubscribe(roomID, events) }
 }
 
-func (hub *RoomHub) Broadcast(roomID string, payload []byte) {
+func (hub *RoomHub) Broadcast(roomID string) {
 	hub.mu.RLock()
 	defer hub.mu.RUnlock()
-
-	roomSubscribers := hub.subscribers[roomID]
-	for events := range roomSubscribers {
-		clonedPayload := append([]byte(nil), payload...)
-
+	for events := range hub.subscribers[roomID] {
 		select {
-		case events <- clonedPayload:
+		case events <- struct{}{}:
 		default:
 			select {
 			case <-events:
 			default:
 			}
 			select {
-			case events <- clonedPayload:
+			case events <- struct{}{}:
 			default:
 			}
 		}
@@ -54,7 +44,6 @@ func (hub *RoomHub) Broadcast(roomID string, payload []byte) {
 func (hub *RoomHub) Close() {
 	hub.mu.Lock()
 	defer hub.mu.Unlock()
-
 	for roomID, roomSubscribers := range hub.subscribers {
 		for events := range roomSubscribers {
 			delete(roomSubscribers, events)
@@ -64,10 +53,9 @@ func (hub *RoomHub) Close() {
 	}
 }
 
-func (hub *RoomHub) unsubscribe(roomID string, events chan []byte) {
+func (hub *RoomHub) unsubscribe(roomID string, events chan struct{}) {
 	hub.mu.Lock()
 	defer hub.mu.Unlock()
-
 	roomSubscribers := hub.subscribers[roomID]
 	if roomSubscribers == nil {
 		return
@@ -75,7 +63,6 @@ func (hub *RoomHub) unsubscribe(roomID string, events chan []byte) {
 	if _, exists := roomSubscribers[events]; !exists {
 		return
 	}
-
 	delete(roomSubscribers, events)
 	if len(roomSubscribers) == 0 {
 		delete(hub.subscribers, roomID)

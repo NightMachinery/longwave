@@ -3,22 +3,21 @@ import { CenteredRow } from "./LayoutElements";
 import {
   faCogs,
   faLink,
-  faRightLeft,
   faUserEdit,
+  faUserPlus,
+  faWandMagicSparkles,
 } from "@fortawesome/free-solid-svg-icons";
 import { faUndo } from "@fortawesome/free-solid-svg-icons";
 import Tippy from "@tippyjs/react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useContext, useMemo, useState } from "react";
+import { useContext, useState } from "react";
 import { GameModelContext } from "../../state/GameModelContext";
-import { InitialGameState } from "../../state/GameState";
 import { copyTextToClipboard } from "../../utils/copyTextToClipboard";
 import {
   buildCanonicalRoomUrl,
   buildMigratedRoomUrl,
-  resolveRoomIdentity,
 } from "../../utils/roomIdentity";
-
+import { requestMigrationLink } from "../../network/roomApi";
 import { useTranslation } from "react-i18next";
 
 export function RoomIdHeader() {
@@ -46,23 +45,14 @@ export function RoomIdHeader() {
 }
 
 export function RoomMenu(props: { roomId: string }) {
-  const { t, i18n } = useTranslation();
-  const { setGameState, setPlayerName } = useContext(GameModelContext);
-  const [copyStatus, setCopyStatus] = useState<"idle" | "room" | "migrate" | "error">(
-    "idle"
-  );
-  const roomIdentity = useMemo(
-    () => resolveRoomIdentity(localStorage, props.roomId, window.location.search),
-    [props.roomId]
-  );
+  const { t } = useTranslation();
+  const { gameState, setPlayerName, submitAction } = useContext(GameModelContext);
+  const [copyStatus, setCopyStatus] = useState<
+    "idle" | "room" | "migrate" | "error"
+  >("idle");
   const canonicalRoomUrl = buildCanonicalRoomUrl(
     window.location.origin,
     props.roomId
-  );
-  const migratedRoomUrl = buildMigratedRoomUrl(
-    window.location.origin,
-    props.roomId,
-    roomIdentity.effectiveRoomAuthId
   );
 
   const menuItemProps = {
@@ -73,6 +63,16 @@ export function RoomMenu(props: { roomId: string }) {
   const copyLink = async (text: string, successStatus: "room" | "migrate") => {
     const copied = await copyTextToClipboard(text);
     setCopyStatus(copied ? successStatus : "error");
+  };
+
+  const updateIntegerSetting = (field: "psychicCount" | "clueQuota", delta: number) => {
+    const currentValue = gameState[field];
+    const nextValue = Math.max(1, currentValue + delta);
+    if (field === "psychicCount") {
+      submitAction({ type: "set_psychic_count", psychicCount: nextValue });
+    } else {
+      submitAction({ type: "set_clue_quota", clueQuota: nextValue });
+    }
   };
 
   return (
@@ -88,17 +88,43 @@ export function RoomMenu(props: { roomId: string }) {
       <div
         {...menuItemProps}
         onClick={() => {
-          void copyLink(migratedRoomUrl, "migrate");
+          void requestMigrationLink(props.roomId)
+            .then((serverURL) => {
+              const url = serverURL.startsWith("http")
+                ? serverURL
+                : buildMigratedRoomUrl(window.location.origin, props.roomId, serverURL);
+              return copyLink(url, "migrate");
+            })
+            .catch(() => setCopyStatus("error"));
         }}
       >
-        <FontAwesomeIcon icon={faRightLeft} /> {t("roomidheader.migrate_device")}
+        <FontAwesomeIcon icon={faUserPlus} /> {t("roomidheader.migrate_device")}
       </div>
-      <div
-        {...menuItemProps}
-        onClick={() => setGameState(InitialGameState(i18n.language))}
-      >
-        <FontAwesomeIcon icon={faUndo} /> {t("roomidheader.reset_room")}
-      </div>
+      {gameState.viewer.canManageRoom && (
+        <>
+          <div style={{ margin: 8 }}>
+            <FontAwesomeIcon icon={faWandMagicSparkles} /> Psychics: {gameState.psychicCount}
+            <button type="button" onClick={() => updateIntegerSetting("psychicCount", -1)}>
+              -
+            </button>
+            <button type="button" onClick={() => updateIntegerSetting("psychicCount", 1)}>
+              +
+            </button>
+          </div>
+          <div style={{ margin: 8 }}>
+            Clue quota: {gameState.clueQuota}
+            <button type="button" onClick={() => updateIntegerSetting("clueQuota", -1)}>
+              -
+            </button>
+            <button type="button" onClick={() => updateIntegerSetting("clueQuota", 1)}>
+              +
+            </button>
+          </div>
+          <div {...menuItemProps} onClick={() => submitAction({ type: "reset_room" })}>
+            <FontAwesomeIcon icon={faUndo} /> {t("roomidheader.reset_room")}
+          </div>
+        </>
+      )}
       <div {...menuItemProps} onClick={() => setPlayerName("")}>
         <FontAwesomeIcon icon={faUserEdit} /> {t("roomidheader.change_name")}
       </div>

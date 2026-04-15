@@ -15,24 +15,62 @@ import (
 	"time"
 )
 
-func TestRoomAPIAndEventStream(t *testing.T) {
+func TestRoomJoinActionFilteringAndEventStream(t *testing.T) {
 	t.Parallel()
 
 	testServer := newTestHTTPServer(t)
 	defer testServer.Close()
 
-	response, err := testServer.Client().Get(testServer.URL + "/api/rooms/ROOM")
-	if err != nil {
-		t.Fatalf("get missing room: %v", err)
+	aliceJoin := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/join", map[string]any{
+		"playerName": "Alice",
+	})
+	if aliceJoin.StatusCode != http.StatusOK {
+		t.Fatalf("expected join to return 200, got %d", aliceJoin.StatusCode)
 	}
-	if response.StatusCode != http.StatusNotFound {
-		t.Fatalf("expected missing room to return 404, got %d", response.StatusCode)
+	aliceCookie := aliceJoin.Cookies()[0]
+	aliceBody := decodeBody[RoomView](t, aliceJoin.Body)
+	if aliceBody.CreatorID == "" || !aliceBody.Players[aliceBody.Viewer.PlayerID].IsModerator {
+		t.Fatalf("expected first joiner to become creator moderator, got %#v", aliceBody)
 	}
-	_ = response.Body.Close()
+	if aliceBody.Viewer.PlayerID == "" {
+		t.Fatalf("expected join response to include viewer player id")
+	}
 
-	streamResponse, err := testServer.Client().Get(testServer.URL + "/api/rooms/ROOM/events")
-	if err != nil {
-		t.Fatalf("connect event stream: %v", err)
+	cooperative := int(GameTypeCooperative)
+	actionResponse := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/actions", map[string]any{
+		"type":     "set_game_type",
+		"gameType": cooperative,
+	}, aliceCookie)
+	if actionResponse.StatusCode != http.StatusOK {
+		t.Fatalf("expected action to return 200, got %d", actionResponse.StatusCode)
+	}
+	aliceActionBody := decodeBody[RoomView](t, actionResponse.Body)
+	if aliceActionBody.RoundPhase != RoundPhaseGiveClue {
+		t.Fatalf("expected cooperative mode to start clueing, got %v", aliceActionBody.RoundPhase)
+	}
+	if aliceActionBody.SpectrumTarget == 0 {
+		t.Fatalf("expected psychic to see target during clueing")
+	}
+
+	bobJoin := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/join", map[string]any{
+		"playerName": "Bob",
+	})
+	if bobJoin.StatusCode != http.StatusOK {
+		t.Fatalf("expected bob join to return 200, got %d", bobJoin.StatusCode)
+	}
+	bobCookie := bobJoin.Cookies()[0]
+	bobGet := doRequestWithCookie(t, testServer, http.MethodGet, "/api/rooms/ROOM", nil, bobCookie)
+	if bobGet.StatusCode != http.StatusOK {
+		t.Fatalf("expected bob get to return 200, got %d", bobGet.StatusCode)
+	}
+	bobBody := decodeBody[RoomView](t, bobGet.Body)
+	if bobBody.SpectrumTarget != 0 {
+		t.Fatalf("expected non-psychic room view to hide target, got %d", bobBody.SpectrumTarget)
+	}
+
+	streamResponse := doRequestWithCookie(t, testServer, http.MethodGet, "/api/rooms/ROOM/events", nil, bobCookie)
+	if streamResponse.StatusCode != http.StatusOK {
+		t.Fatalf("expected room events to return 200, got %d", streamResponse.StatusCode)
 	}
 	defer streamResponse.Body.Close()
 
@@ -50,61 +88,34 @@ func TestRoomAPIAndEventStream(t *testing.T) {
 			if !strings.HasPrefix(line, "data: ") {
 				continue
 			}
-
-			streamPayload <- strings.TrimSpace(strings.TrimPrefix(line, "data: "))
-			return
+			payload := strings.TrimSpace(strings.TrimPrefix(line, "data: "))
+			if strings.Contains(payload, `"text":"coffee"`) {
+				streamPayload <- payload
+				return
+			}
 		}
 	}()
 
-	roomPatch, err := json.Marshal(map[string]any{
-		"guess": 9,
-		"players": map[string]any{
-			"p1": map[string]any{
-				"name": "Alice",
-			},
-		},
-	})
-	if err != nil {
-		t.Fatalf("encode room patch: %v", err)
-	}
-
-	patchResponse, err := testServer.Client().Do(newJSONRequest(t, http.MethodPatch, testServer.URL+"/api/rooms/ROOM", roomPatch))
-	if err != nil {
-		t.Fatalf("patch room: %v", err)
-	}
-	defer patchResponse.Body.Close()
-
-	if patchResponse.StatusCode != http.StatusOK {
-		t.Fatalf("expected patch to return 200, got %d", patchResponse.StatusCode)
+	clueAction := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/actions", map[string]any{
+		"type": "submit_clue",
+		"clue": "coffee",
+	}, aliceCookie)
+	if clueAction.StatusCode != http.StatusOK {
+		t.Fatalf("expected submit clue to return 200, got %d", clueAction.StatusCode)
 	}
 
 	select {
 	case payload := <-streamPayload:
-		if !strings.Contains(payload, `"guess":9`) {
-			t.Fatalf("expected event stream payload to include updated room state, got %s", payload)
+		if !strings.Contains(payload, `"clues":[{"authorId"`) {
+			t.Fatalf("expected event stream payload to include clue update, got %s", payload)
+		}
+		if strings.Contains(payload, `"spectrumTarget":`) && !strings.Contains(payload, `"spectrumTarget":0`) {
+			t.Fatalf("expected bob SSE payload to keep hidden target filtered, got %s", payload)
 		}
 	case err := <-streamError:
 		t.Fatalf("read event stream payload: %v", err)
 	case <-time.After(5 * time.Second):
 		t.Fatalf("timed out waiting for event stream payload")
-	}
-
-	getResponse, err := testServer.Client().Get(testServer.URL + "/api/rooms/ROOM")
-	if err != nil {
-		t.Fatalf("get saved room: %v", err)
-	}
-	defer getResponse.Body.Close()
-
-	if getResponse.StatusCode != http.StatusOK {
-		t.Fatalf("expected saved room to return 200, got %d", getResponse.StatusCode)
-	}
-
-	savedRoomState, err := io.ReadAll(getResponse.Body)
-	if err != nil {
-		t.Fatalf("read saved room: %v", err)
-	}
-	if !bytes.Contains(savedRoomState, []byte(`"guess":9`)) {
-		t.Fatalf("expected saved room to include guess 9, got %s", savedRoomState)
 	}
 }
 
@@ -177,16 +188,46 @@ func newTestHTTPServer(t *testing.T) *httptest.Server {
 	return httptest.NewServer(app.Handler())
 }
 
-func newJSONRequest(t *testing.T, method string, url string, body []byte) *http.Request {
+func doJSONRequest(t *testing.T, server *httptest.Server, method string, path string, body map[string]any, cookies ...*http.Cookie) *http.Response {
 	t.Helper()
-
-	request, err := http.NewRequestWithContext(context.Background(), method, url, bytes.NewReader(body))
+	encodedBody, err := json.Marshal(body)
 	if err != nil {
-		t.Fatalf("create %s request: %v", method, err)
+		t.Fatalf("encode json request: %v", err)
 	}
-	request.Header.Set("Content-Type", "application/json")
+	return doRequestWithCookie(t, server, method, path, encodedBody, cookies...)
+}
 
-	return request
+func doRequestWithCookie(t *testing.T, server *httptest.Server, method string, path string, body []byte, cookies ...*http.Cookie) *http.Response {
+	t.Helper()
+	request, err := http.NewRequestWithContext(context.Background(), method, server.URL+path, bytes.NewReader(body))
+	if err != nil {
+		t.Fatalf("create request: %v", err)
+	}
+	if body != nil {
+		request.Header.Set("Content-Type", "application/json")
+	}
+	for _, cookie := range cookies {
+		request.AddCookie(cookie)
+	}
+	response, err := server.Client().Do(request)
+	if err != nil {
+		t.Fatalf("execute request: %v", err)
+	}
+	return response
+}
+
+func decodeBody[T any](t *testing.T, body io.ReadCloser) T {
+	t.Helper()
+	defer body.Close()
+	payload, err := io.ReadAll(body)
+	if err != nil {
+		t.Fatalf("read body: %v", err)
+	}
+	var decoded T
+	if err := json.Unmarshal(payload, &decoded); err != nil {
+		t.Fatalf("decode body: %v\npayload: %s", err, payload)
+	}
+	return decoded
 }
 
 func osWriteFile(path string, data []byte) error {

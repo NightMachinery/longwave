@@ -1,37 +1,36 @@
 import React, { useRef, useContext, useState } from "react";
-
-import { GameType, RoundPhase } from "../../state/GameState";
 import { Spectrum } from "../common/Spectrum";
 import { CenteredColumn, CenteredRow } from "../common/LayoutElements";
 import { Button } from "../common/Button";
 import { GameModelContext } from "../../state/GameModelContext";
-import { RandomSpectrumTarget } from "../../state/RandomSpectrumTarget";
 import { Info } from "../common/Info";
 import { Animate } from "../common/Animate";
 import { useTranslation } from "react-i18next";
 
 export function GiveClue() {
   const { t } = useTranslation();
-  const {
-    gameState,
-    localPlayer,
-    clueGiver,
-    spectrumCard,
-    setGameState,
-  } = useContext(GameModelContext);
+  const { gameState, psychics, spectrumCard, submitAction } =
+    useContext(GameModelContext);
   const inputElement = useRef<HTMLInputElement>(null);
   const [disableSubmit, setDisableSubmit] = useState(
     !inputElement.current?.value?.length
   );
 
-  if (!clueGiver) {
-    setGameState({
-      clueGiver: localPlayer.id,
-    });
-    return null;
-  }
+  const submit = () => {
+    if (!inputElement.current?.value?.length) {
+      return false;
+    }
 
-  if (localPlayer.id !== clueGiver.id) {
+    submitAction({
+      type: "submit_clue",
+      clue: inputElement.current.value,
+    });
+    if (inputElement.current) {
+      inputElement.current.value = "";
+    }
+  };
+
+  if (!gameState.viewer.isCurrentPsychic) {
     return (
       <div>
         <Animate animation="wipe-reveal-right">
@@ -39,38 +38,26 @@ export function GiveClue() {
         </Animate>
         <CenteredColumn>
           <div>
-            {t("giveclue.waiting_for_clue", { givername: clueGiver.name })}
+            {t(
+              "giveclue.waiting_for_clues",
+              "Waiting for psychics to submit clues..."
+            )}
           </div>
+          <div>
+            {gameState.viewer.submittedClueCount}/{gameState.viewer.effectiveClueQuota}
+          </div>
+          {psychics.length > 0 && (
+            <div>
+              {t("giveclue.current_psychics", "Current psychics")}: {psychics.map((psychic) => psychic.name).join(", ")}
+            </div>
+          )}
         </CenteredColumn>
       </div>
     );
   }
 
-  const submit = () => {
-    if (!inputElement.current?.value?.length) {
-      return false;
-    }
-
-    setGameState({
-      clue: inputElement.current.value,
-      guess: 10,
-      roundPhase: RoundPhase.MakeGuess,
-    });
-  };
-
-  const redrawCard = () =>
-    setGameState({
-      deckIndex: gameState.deckIndex + 1,
-      spectrumTarget: RandomSpectrumTarget(),
-    });
-
   return (
     <div>
-      {gameState.gameType !== GameType.Cooperative && (
-        <CenteredColumn style={{ alignItems: "flex-end" }}>
-          <Button text={t("giveclue.draw_other_hand")} onClick={redrawCard} />
-        </CenteredColumn>
-      )}
       <Animate animation="wipe-reveal-right">
         <Spectrum
           targetValue={gameState.spectrumTarget}
@@ -78,6 +65,15 @@ export function GiveClue() {
         />
       </Animate>
       <CenteredColumn>
+        <div>
+          {t("giveclue.current_progress", "Clues submitted")}: {gameState.viewer.submittedClueCount}/
+          {gameState.viewer.effectiveClueQuota}
+        </div>
+        {gameState.clues.map((clue) => (
+          <div key={`${clue.authorId}-${clue.order}`}>
+            <strong>{clue.authorName}</strong>: {clue.text}
+          </div>
+        ))}
         <CenteredRow>
           <input
             type="text"
@@ -108,7 +104,7 @@ export function GiveClue() {
         <Button
           text={t("giveclue.give_clue")}
           onClick={submit}
-          disabled={disableSubmit}
+          disabled={disableSubmit || !gameState.viewer.canSubmitClue}
         />
       </CenteredColumn>
     </div>

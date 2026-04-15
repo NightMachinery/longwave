@@ -20,7 +20,8 @@ const (
 	defaultDBPath          = ".self_host/data/rooms.sqlite"
 	defaultRoomTTL         = 7 * 24 * time.Hour
 	defaultCleanupInterval = time.Hour
-	maxPatchBodySize       = 1 << 20
+	maxBodySize            = 1 << 20
+	sessionCookieName      = "longwave_session"
 )
 
 type Config struct {
@@ -32,6 +33,25 @@ type Config struct {
 	Now             func() time.Time
 }
 
+type App struct {
+	config      Config
+	store       *Store
+	hub         *RoomHub
+	handler     http.Handler
+	server      *http.Server
+	cleanupStop chan struct{}
+}
+
+type joinRequest struct {
+	PlayerName   string `json:"playerName"`
+	MigrationKey string `json:"migrationKey"`
+	DeckLanguage string `json:"deckLanguage"`
+}
+
+type migrateResponse struct {
+	URL string `json:"url"`
+}
+
 func ConfigFromEnv() (Config, error) {
 	roomTTL := defaultRoomTTL
 	if envRoomTTL := strings.TrimSpace(os.Getenv("LONGWAVE_ROOM_TTL")); envRoomTTL != "" {
@@ -41,7 +61,6 @@ func ConfigFromEnv() (Config, error) {
 		}
 		roomTTL = parsedTTL
 	}
-
 	cleanupInterval := defaultCleanupInterval
 	if envCleanupInterval := strings.TrimSpace(os.Getenv("LONGWAVE_CLEANUP_INTERVAL")); envCleanupInterval != "" {
 		parsedCleanupInterval, err := time.ParseDuration(envCleanupInterval)
@@ -50,7 +69,6 @@ func ConfigFromEnv() (Config, error) {
 		}
 		cleanupInterval = parsedCleanupInterval
 	}
-
 	return Config{
 		Addr:            firstNonEmpty(os.Getenv("LONGWAVE_ADDR"), defaultAddr),
 		BuildDir:        firstNonEmpty(os.Getenv("LONGWAVE_BUILD_DIR"), defaultBuildDir),
@@ -58,15 +76,6 @@ func ConfigFromEnv() (Config, error) {
 		RoomTTL:         roomTTL,
 		CleanupInterval: cleanupInterval,
 	}, nil
-}
-
-type App struct {
-	config      Config
-	store       *Store
-	hub         *RoomHub
-	handler     http.Handler
-	server      *http.Server
-	cleanupStop chan struct{}
 }
 
 func New(config Config) (*App, error) {
@@ -88,58 +97,38 @@ func New(config Config) (*App, error) {
 	if config.CleanupInterval <= 0 {
 		config.CleanupInterval = defaultCleanupInterval
 	}
-
 	indexPath := filepath.Join(config.BuildDir, "index.html")
 	if _, err := os.Stat(indexPath); err != nil {
 		return nil, fmt.Errorf("build output missing at %s: %w", indexPath, err)
 	}
-
 	store, err := OpenStore(config.DBPath, config.RoomTTL, config.Now)
 	if err != nil {
 		return nil, err
 	}
-
-	app := &App{
-		config:      config,
-		store:       store,
-		hub:         NewRoomHub(),
-		cleanupStop: make(chan struct{}),
-	}
-
+	app := &App{config: config, store: store, hub: NewRoomHub(), cleanupStop: make(chan struct{})}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", app.handleHealthz)
+	mux.HandleFunc("POST /api/rooms/{roomID}/join", app.handleJoinRoom)
+	mux.HandleFunc("POST /api/rooms/{roomID}/migrate", app.handleMigrateRoom)
 	mux.HandleFunc("GET /api/rooms/{roomID}", app.handleGetRoom)
-	mux.HandleFunc("PATCH /api/rooms/{roomID}", app.handlePatchRoom)
+	mux.HandleFunc("POST /api/rooms/{roomID}/actions", app.handleRoomAction)
 	mux.HandleFunc("GET /api/rooms/{roomID}/events", app.handleRoomEvents)
 	mux.Handle("/", spaHandler(config.BuildDir))
-
 	app.handler = mux
-	app.server = &http.Server{
-		Addr:    config.Addr,
-		Handler: mux,
-	}
-
+	app.server = &http.Server{Addr: config.Addr, Handler: mux}
 	if err := app.store.DeleteExpired(context.Background()); err != nil {
 		return nil, fmt.Errorf("cleanup expired rooms: %w", err)
 	}
-
 	go app.cleanupExpiredRooms()
-
 	return app, nil
 }
 
-func (app *App) Handler() http.Handler {
-	return app.handler
-}
-
-func (app *App) ListenAndServe() error {
-	return app.server.ListenAndServe()
-}
+func (app *App) Handler() http.Handler { return app.handler }
+func (app *App) ListenAndServe() error { return app.server.ListenAndServe() }
 
 func (app *App) Close() error {
 	close(app.cleanupStop)
 	app.hub.Close()
-
 	var closeErrors []error
 	if app.server != nil {
 		if err := app.server.Close(); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -151,14 +140,12 @@ func (app *App) Close() error {
 			closeErrors = append(closeErrors, err)
 		}
 	}
-
 	return errors.Join(closeErrors...)
 }
 
 func (app *App) cleanupExpiredRooms() {
 	ticker := time.NewTicker(app.config.CleanupInterval)
 	defer ticker.Stop()
-
 	for {
 		select {
 		case <-ticker.C:
@@ -176,97 +163,203 @@ func (app *App) handleHealthz(w http.ResponseWriter, _ *http.Request) {
 	_, _ = w.Write([]byte("ok\n"))
 }
 
-func (app *App) handleGetRoom(w http.ResponseWriter, r *http.Request) {
+func (app *App) handleJoinRoom(w http.ResponseWriter, r *http.Request) {
 	roomID := strings.TrimSpace(r.PathValue("roomID"))
 	if roomID == "" {
 		writeJSONError(w, http.StatusBadRequest, "room id is required")
 		return
 	}
-
-	roomState, found, err := app.store.GetRoom(r.Context(), roomID, true)
+	var request joinRequest
+	if err := decodeJSONBody(r, &request); err != nil {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	sessionSecret := readSessionCookie(r)
+	joinedPlayerID := ""
+	room, err := app.store.UpdateRoom(r.Context(), roomID, func(room *RoomState, found bool) error {
+		if !found {
+			*room = InitialRoomState(request.DeckLanguage)
+		}
+		if room.Players == nil {
+			room.Players = map[string]PlayerState{}
+		}
+		if room.MigrationTokens == nil {
+			room.MigrationTokens = map[string]string{}
+		}
+		if playerID, ok := authenticatedPlayer(room, sessionSecret); ok {
+			joinedPlayerID = playerID
+			player := room.Players[playerID]
+			if strings.TrimSpace(request.PlayerName) != "" {
+				player.Name = strings.TrimSpace(request.PlayerName)
+				room.Players[playerID] = player
+			}
+			return nil
+		}
+		if request.MigrationKey != "" {
+			if migratedPlayerID, ok := room.MigrationTokens[request.MigrationKey]; ok {
+				joinedPlayerID = migratedPlayerID
+				player := room.Players[migratedPlayerID]
+				player.SessionSecret = randomToken(16)
+				room.Players[migratedPlayerID] = player
+				delete(room.MigrationTokens, request.MigrationKey)
+				return nil
+			}
+		}
+		joinedPlayerID = randomToken(8)
+		playerName := strings.TrimSpace(request.PlayerName)
+		if playerName == "" {
+			playerName = "Player"
+		}
+		room.Players[joinedPlayerID] = PlayerState{
+			Name:          playerName,
+			Team:          TeamUnset,
+			IsModerator:   room.CreatorID == "",
+			SessionSecret: randomToken(16),
+		}
+		if room.CreatorID == "" {
+			room.CreatorID = joinedPlayerID
+		}
+		return nil
+	})
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	if !found {
-		writeJSONError(w, http.StatusNotFound, "room not found")
-		return
-	}
-
-	writeJSONResponse(w, http.StatusOK, roomState)
+	playerID := joinedPlayerID
+	setSessionCookie(w, room.Players[playerID].SessionSecret)
+	app.hub.Broadcast(roomID)
+	writeJSONResponseValue(w, http.StatusOK, sanitizeRoomForViewer(room, playerID))
 }
 
-func (app *App) handlePatchRoom(w http.ResponseWriter, r *http.Request) {
+func (app *App) handleMigrateRoom(w http.ResponseWriter, r *http.Request) {
 	roomID := strings.TrimSpace(r.PathValue("roomID"))
-	if roomID == "" {
-		writeJSONError(w, http.StatusBadRequest, "room id is required")
-		return
-	}
-
-	bodyReader := io.LimitReader(r.Body, maxPatchBodySize)
-	defer r.Body.Close()
-
-	var patch map[string]json.RawMessage
-	if err := json.NewDecoder(bodyReader).Decode(&patch); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "request body must be a JSON object")
-		return
-	}
-
-	roomState, err := app.store.PatchRoom(r.Context(), roomID, patch)
+	_, playerID, ok, err := app.authenticatedRoom(r.Context(), roomID, r)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	if !ok {
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+	room, err := app.store.UpdateRoom(r.Context(), roomID, func(current *RoomState, _ bool) error {
+		token := randomToken(16)
+		if current.MigrationTokens == nil {
+			current.MigrationTokens = map[string]string{}
+		}
+		current.MigrationTokens[token] = playerID
+		return nil
+	})
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	var token string
+	for migrationToken, migrationPlayerID := range room.MigrationTokens {
+		if migrationPlayerID == playerID {
+			token = migrationToken
+		}
+	}
+	writeJSONResponseValue(w, http.StatusOK, migrateResponse{URL: buildMigrationURL(r, roomID, token)})
+}
 
-	app.hub.Broadcast(roomID, roomState)
-	writeJSONResponse(w, http.StatusOK, roomState)
+func (app *App) handleGetRoom(w http.ResponseWriter, r *http.Request) {
+	roomID := strings.TrimSpace(r.PathValue("roomID"))
+	room, playerID, ok, err := app.authenticatedRoom(r.Context(), roomID, r)
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !ok {
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+	writeJSONResponseValue(w, http.StatusOK, sanitizeRoomForViewer(room, playerID))
+}
+
+func (app *App) handleRoomAction(w http.ResponseWriter, r *http.Request) {
+	roomID := strings.TrimSpace(r.PathValue("roomID"))
+	room, playerID, ok, err := app.authenticatedRoom(r.Context(), roomID, r)
+	_ = room
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !ok {
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+	var action ActionRequest
+	if err := decodeJSONBody(r, &action); err != nil {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	updatedRoom, err := app.store.UpdateRoom(r.Context(), roomID, func(room *RoomState, _ bool) error {
+		if _, ok := room.Players[playerID]; !ok {
+			return errUnauthorized
+		}
+		if err := applyAction(room, playerID, action); err != nil {
+			return err
+		}
+		normalizeRoundState(room)
+		return nil
+	})
+	if err != nil {
+		status := http.StatusInternalServerError
+		if errors.Is(err, errUnauthorized) {
+			status = http.StatusForbidden
+		} else if strings.Contains(err.Error(), "required") || strings.Contains(err.Error(), "cannot") || strings.Contains(err.Error(), "unsupported") {
+			status = http.StatusBadRequest
+		}
+		writeJSONError(w, status, err.Error())
+		return
+	}
+	app.hub.Broadcast(roomID)
+	writeJSONResponseValue(w, http.StatusOK, sanitizeRoomForViewer(updatedRoom, playerID))
 }
 
 func (app *App) handleRoomEvents(w http.ResponseWriter, r *http.Request) {
 	roomID := strings.TrimSpace(r.PathValue("roomID"))
-	if roomID == "" {
-		writeJSONError(w, http.StatusBadRequest, "room id is required")
-		return
-	}
-
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		writeJSONError(w, http.StatusInternalServerError, "streaming is not supported")
 		return
 	}
-
+	_, playerID, authOK, err := app.authenticatedRoom(r.Context(), roomID, r)
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !authOK {
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 	w.Header().Set("X-Accel-Buffering", "no")
 	_, _ = io.WriteString(w, ": connected\n\n")
 	flusher.Flush()
-
-	initialRoomState, found, err := app.store.GetRoom(r.Context(), roomID, true)
-	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
 	events, unsubscribe := app.hub.Subscribe(roomID)
 	defer unsubscribe()
-
-	if found {
-		writeSSEMessage(w, flusher, initialRoomState)
+	if room, _, ok, err := app.authenticatedRoom(r.Context(), roomID, r); err == nil && ok {
+		writeSSEMessageValue(w, flusher, sanitizeRoomForViewer(room, playerID))
 	}
-
 	keepAliveTicker := time.NewTicker(30 * time.Second)
 	defer keepAliveTicker.Stop()
-
 	for {
 		select {
 		case <-r.Context().Done():
 			return
-		case payload, ok := <-events:
+		case _, ok := <-events:
 			if !ok {
 				return
 			}
-			writeSSEMessage(w, flusher, payload)
+			room, _, authOK, err := app.authenticatedRoom(r.Context(), roomID, r)
+			if err != nil || !authOK {
+				return
+			}
+			writeSSEMessageValue(w, flusher, sanitizeRoomForViewer(room, playerID))
 		case <-keepAliveTicker.C:
 			_, _ = io.WriteString(w, ": keepalive\n\n")
 			flusher.Flush()
@@ -274,9 +367,73 @@ func (app *App) handleRoomEvents(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func writeSSEMessage(w http.ResponseWriter, flusher http.Flusher, payload []byte) {
-	_, _ = fmt.Fprintf(w, "data: %s\n\n", payload)
+func (app *App) authenticatedRoom(ctx context.Context, roomID string, r *http.Request) (RoomState, string, bool, error) {
+	room, found, err := app.store.LoadRoom(ctx, roomID, true)
+	if err != nil {
+		return RoomState{}, "", false, err
+	}
+	if !found {
+		return RoomState{}, "", false, nil
+	}
+	playerID, ok := authenticatedPlayer(&room, readSessionCookie(r))
+	return room, playerID, ok, nil
+}
+
+func authenticatedPlayer(room *RoomState, sessionSecret string) (string, bool) {
+	if sessionSecret == "" {
+		return "", false
+	}
+	for playerID, player := range room.Players {
+		if player.SessionSecret == sessionSecret {
+			return playerID, true
+		}
+	}
+	return "", false
+}
+
+func readSessionCookie(r *http.Request) string {
+	cookie, err := r.Cookie(sessionCookieName)
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(cookie.Value)
+}
+
+func setSessionCookie(w http.ResponseWriter, sessionSecret string) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     sessionCookieName,
+		Value:    sessionSecret,
+		HttpOnly: true,
+		Path:     "/",
+		SameSite: http.SameSiteLaxMode,
+	})
+}
+
+func decodeJSONBody(r *http.Request, target any) error {
+	bodyReader := io.LimitReader(r.Body, maxBodySize)
+	defer r.Body.Close()
+	if err := json.NewDecoder(bodyReader).Decode(target); err != nil {
+		return fmt.Errorf("request body must be valid JSON")
+	}
+	return nil
+}
+
+func writeSSEMessageValue(w http.ResponseWriter, flusher http.Flusher, payload any) {
+	encoded, err := json.Marshal(payload)
+	if err != nil {
+		return
+	}
+	_, _ = fmt.Fprintf(w, "data: %s\n\n", encoded)
 	flusher.Flush()
+}
+
+func writeJSONResponseValue(w http.ResponseWriter, status int, payload any) {
+	encoded, err := json.Marshal(payload)
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSONResponse(w, status, encoded)
 }
 
 func writeJSONResponse(w http.ResponseWriter, status int, payload []byte) {
@@ -286,9 +443,7 @@ func writeJSONResponse(w http.ResponseWriter, status int, payload []byte) {
 }
 
 func writeJSONError(w http.ResponseWriter, status int, message string) {
-	responseBody, err := json.Marshal(map[string]string{
-		"error": message,
-	})
+	responseBody, err := json.Marshal(map[string]string{"error": message})
 	if err != nil {
 		http.Error(w, message, status)
 		return
@@ -299,25 +454,21 @@ func writeJSONError(w http.ResponseWriter, status int, message string) {
 func spaHandler(buildDir string) http.Handler {
 	fileServer := http.FileServer(http.Dir(buildDir))
 	indexPath := filepath.Join(buildDir, "index.html")
-
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet && r.Method != http.MethodHead {
 			http.NotFound(w, r)
 			return
 		}
-
 		cleanPath := pathFromRequest(r.URL.Path)
 		if cleanPath == "" {
 			http.ServeFile(w, r, indexPath)
 			return
 		}
-
 		fullPath := filepath.Join(buildDir, cleanPath)
 		if info, err := os.Stat(fullPath); err == nil && !info.IsDir() {
 			fileServer.ServeHTTP(w, r)
 			return
 		}
-
 		http.ServeFile(w, r, indexPath)
 	})
 }
@@ -340,4 +491,14 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+func buildMigrationURL(r *http.Request, roomID string, token string) string {
+	scheme := "http"
+	if forwardedProto := strings.TrimSpace(r.Header.Get("X-Forwarded-Proto")); forwardedProto != "" {
+		scheme = forwardedProto
+	} else if r.TLS != nil {
+		scheme = "https"
+	}
+	return fmt.Sprintf("%s://%s/%s?migrate=%s", scheme, r.Host, roomID, token)
 }
