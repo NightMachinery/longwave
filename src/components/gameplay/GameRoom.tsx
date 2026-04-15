@@ -1,5 +1,5 @@
 import { useLocation, useParams } from "react-router-dom";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNetworkBackedGameState } from "../hooks/useNetworkBackedGameState";
 import { InputName } from "./InputName";
 import { GameModelContext } from "../../state/GameModelContext";
@@ -39,26 +39,20 @@ export function GameRoom() {
     setPlayerNameState(readStoredPlayerName(localStorage, playerNameStorageKey));
   }, [playerNameStorageKey]);
 
-  const setPlayerName = (nextPlayerName: string) => {
-    writeStoredPlayerName(localStorage, playerNameStorageKey, nextPlayerName);
-    setPlayerNameState(nextPlayerName);
-  };
+  const setPlayerName = useCallback(
+    (nextPlayerName: string) => {
+      writeStoredPlayerName(localStorage, playerNameStorageKey, nextPlayerName);
+      setPlayerNameState(nextPlayerName);
+    },
+    [playerNameStorageKey]
+  );
 
   const [gameState, setGameState] = useNetworkBackedGameState(
     roomId,
     roomIdentity.effectiveRoomAuthId,
     playerName
   );
-
   const cardsTranslation = useTranslation("spectrum-cards");
-
-  if (
-    gameState.deckLanguage !== null &&
-    cardsTranslation.i18n.language !== gameState.deckLanguage
-  ) {
-    cardsTranslation.i18n.changeLanguage(gameState.deckLanguage);
-    return null;
-  }
 
   useEffect(() => {
     const syncedPlayerName =
@@ -67,7 +61,12 @@ export function GameRoom() {
     if (syncedPlayerName.length > 0 && syncedPlayerName !== playerName) {
       setPlayerName(syncedPlayerName);
     }
-  }, [gameState.players, playerName, roomIdentity.effectiveRoomAuthId]);
+  }, [
+    gameState.players,
+    playerName,
+    roomIdentity.effectiveRoomAuthId,
+    setPlayerName,
+  ]);
 
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
@@ -79,7 +78,15 @@ export function GameRoom() {
     if (rocketcrabPlayerName !== null && rocketcrabPlayerName !== playerName) {
       setPlayerName(rocketcrabPlayerName);
     }
-  }, [location.search, playerName]);
+  }, [location.search, playerName, setPlayerName]);
+
+  if (
+    gameState.deckLanguage !== null &&
+    cardsTranslation.i18n.language !== gameState.deckLanguage
+  ) {
+    cardsTranslation.i18n.changeLanguage(gameState.deckLanguage);
+    return null;
+  }
 
   if (roomId === "MULTIPLAYER_TEST") {
     return <FakeRooms />;
