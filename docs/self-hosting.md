@@ -11,7 +11,7 @@ Use:
 Default public URL:
 
 ```text
-http://m1.pinky.lilf.ir
+http://wavelength.pinky.lilf.ir
 ```
 
 If `public_url` omits a scheme, `http://` is assumed.
@@ -78,7 +78,7 @@ Examples:
 
 ```zsh
 ./self_host.zsh setup
-./self_host.zsh setup m1.pinky.lilf.ir
+./self_host.zsh setup wavelength.pinky.lilf.ir
 ./self_host.zsh setup http://games.internal
 ./self_host.zsh setup https://games.internal
 ```
@@ -91,7 +91,7 @@ Examples:
 
 ```zsh
 ./self_host.zsh redeploy
-./self_host.zsh redeploy http://m1.pinky.lilf.ir
+./self_host.zsh redeploy http://wavelength.pinky.lilf.ir
 ```
 
 ### `start [public_url]`
@@ -102,7 +102,7 @@ Examples:
 
 ```zsh
 ./self_host.zsh start
-./self_host.zsh start http://m1.pinky.lilf.ir
+./self_host.zsh start http://wavelength.pinky.lilf.ir
 ```
 
 ### `stop`
