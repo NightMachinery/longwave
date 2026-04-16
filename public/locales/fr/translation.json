@@ -1,15 +1,11 @@
 {
   "commonfooter": {
-    "developed_by": "est conçu par Wolfgang Warsch, Alex Hague et Justin Vickers.",
-    "adapted_for_web": "Adapté pour le web",
-    "adapted_for_web_by": "par Evan Bailey et Margarethe Schoen.",
-    "support_patreon": "Soutenez-nous sur Patreon !"
+    "open_source": "Longwave est open source sur"
   },
   "landingpage": {
     "create_room": "Créer un Salon",
     "longwave": "Grandes ondes",
-    "adaptation": "est une adaptation en ligne en temps réel du jeu de société",
-    "wavelength": "Longueur d'onde",
+    "tagline": "est un party game en temps réel pour les groupes à distance.",
     "best_enjoyed": "De préférence à jouer avec une messagerie vocale !"
   },
   "roomidheader": {
@@ -58,7 +54,10 @@
     "join_team": "Rejoindre une Équipe",
     "join_left": "Rejoindre",
     "join_right": "Rejoindre",
-    "start_game": "Démarrer la partie"
+    "start_game": "Démarrer la partie",
+    "assign_players": "Manage players",
+    "unassigned_count": "Unassigned players: {{count}}",
+    "waiting_for_mod": "Waiting for a moderator to start the game."
   },
   "makeguess": {
     "players_clue": "Indice fourni par {{givername}}",
@@ -76,12 +75,14 @@
     "last_card": "Dernière carte !",
     "card_remaining": "Cartes restantes",
     "coop_score": "Score Coopératif",
-    "points": "POINTS"
+    "points": "POINTS",
+    "observers": "Observers"
   },
   "setupgame": {
     "standard_game": "Standard (Équipe) : 4+ Joueurs",
     "coop_game": "Coopératif : 2+ Joueurs",
-    "free_game": "Partie Libre : 2+ Joueurs"
+    "free_game": "Partie Libre : 2+ Joueurs",
+    "waiting_for_mod": "Waiting for a moderator to choose a mode."
   },
   "viewscore": {
     "player_clue": "Indice fourni par {{givername}}",
@@ -98,5 +99,23 @@
     "draw_next_card": "Dessiner la carte de plage de valeur suivante",
     "score": "Score",
     "got": "obtient"
+  },
+  "playercard": {
+    "creator": "Creator",
+    "you": "You",
+    "moderator": "Moderator",
+    "representative": "Representative",
+    "observer": "Observer",
+    "psychic": "Psychic",
+    "temporary_rep": "Temporary rep",
+    "observing": "Watching this room",
+    "active_player": "Active player",
+    "team_assignment": "Team",
+    "remove_rep": "Remove rep",
+    "make_rep": "Make rep",
+    "rejoin": "Rejoin",
+    "observe": "Observe",
+    "demote_mod": "Demote mod",
+    "promote_mod": "Promote mod"
   }
 }

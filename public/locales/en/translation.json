@@ -1,15 +1,11 @@
 {
   "commonfooter": {
-    "developed_by": "is designed by Wolfgang Warsch, Alex Hague and Justin Vickers.",
-    "adapted_for_web": "Adapted for web",
-    "adapted_for_web_by": "by Evan Bailey and Margarethe Schoen.",
-    "support_patreon": "Support us on Patreon!"
+    "open_source": "Longwave is open source on"
   },
   "landingpage": {
     "create_room": "Create Room",
     "longwave": "Longwave",
-    "adaptation": "is an online, real-time adaptation of the board game",
-    "wavelength": "Wavelength",
+    "tagline": "is a real-time party game for remote groups.",
     "best_enjoyed": "Best enjoyed with voice chat!"
   },
   "roomidheader": {
@@ -62,7 +58,10 @@
     "join_team": "Join Team",
     "join_left": "Join",
     "join_right": "Join",
-    "start_game": "Start game"
+    "start_game": "Start game",
+    "assign_players": "Manage players",
+    "unassigned_count": "Unassigned players: {{count}}",
+    "waiting_for_mod": "Waiting for a moderator to start the game."
   },
   "makeguess": {
     "players_clue": "{{givername}}'s clue",
@@ -83,12 +82,14 @@
     "last_card": "Last Card!",
     "card_remaining": "Cards remaining",
     "coop_score": "Cooperative Score",
-    "points": "POINTS"
+    "points": "POINTS",
+    "observers": "Observers"
   },
   "setupgame": {
     "standard_game": "Standard (Teams): 4+ Players",
     "coop_game": "Cooperative: 2+ Players",
-    "free_game": "Free Play: 2+ Players"
+    "free_game": "Free Play: 2+ Players",
+    "waiting_for_mod": "Waiting for a moderator to choose a mode."
   },
   "viewscore": {
     "player_clue": "{{givername}}'s clue",
@@ -105,5 +106,23 @@
     "draw_next_card": "Draw next Spectrum Card",
     "score": "Score",
     "got": "gets"
+  },
+  "playercard": {
+    "creator": "Creator",
+    "you": "You",
+    "moderator": "Moderator",
+    "representative": "Representative",
+    "observer": "Observer",
+    "psychic": "Psychic",
+    "temporary_rep": "Temporary rep",
+    "observing": "Watching this room",
+    "active_player": "Active player",
+    "team_assignment": "Team",
+    "remove_rep": "Remove rep",
+    "make_rep": "Make rep",
+    "rejoin": "Rejoin",
+    "observe": "Observe",
+    "demote_mod": "Demote mod",
+    "promote_mod": "Promote mod"
   }
 }

@@ -154,6 +154,58 @@ func TestStaticFilesServeAssetsAndFallbackToIndex(t *testing.T) {
 	}
 }
 
+func TestCreatorCanSelfManageRepresentativeAndObserverButNotDemoteModerator(t *testing.T) {
+	t.Parallel()
+
+	testServer := newTestHTTPServer(t)
+	defer testServer.Close()
+
+	join := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/join", map[string]any{
+		"playerName": "Alice",
+	})
+	if join.StatusCode != http.StatusOK {
+		t.Fatalf("expected join to return 200, got %d", join.StatusCode)
+	}
+	creatorCookie := join.Cookies()[0]
+	creatorBody := decodeBody[RoomView](t, join.Body)
+	creatorID := creatorBody.Viewer.PlayerID
+
+	setRep := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/actions", map[string]any{
+		"type":     "set_representative",
+		"playerId": creatorID,
+		"value":    true,
+	}, creatorCookie)
+	if setRep.StatusCode != http.StatusOK {
+		t.Fatalf("expected self representative update to return 200, got %d", setRep.StatusCode)
+	}
+	repBody := decodeBody[RoomView](t, setRep.Body)
+	if !repBody.Players[creatorID].IsRepresentative {
+		t.Fatalf("expected creator to become representative")
+	}
+
+	setObserver := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/actions", map[string]any{
+		"type":     "set_observer",
+		"playerId": creatorID,
+		"value":    true,
+	}, creatorCookie)
+	if setObserver.StatusCode != http.StatusOK {
+		t.Fatalf("expected self observer update to return 200, got %d", setObserver.StatusCode)
+	}
+	observerBody := decodeBody[RoomView](t, setObserver.Body)
+	if !observerBody.Players[creatorID].IsObserver {
+		t.Fatalf("expected creator to become observer")
+	}
+
+	demote := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/actions", map[string]any{
+		"type":     "set_moderator",
+		"playerId": creatorID,
+		"value":    false,
+	}, creatorCookie)
+	if demote.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected demoting creator to fail with 400, got %d", demote.StatusCode)
+	}
+}
+
 func newTestHTTPServer(t *testing.T) *httptest.Server {
 	t.Helper()
 

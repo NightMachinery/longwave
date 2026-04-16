@@ -1,19 +1,20 @@
-import React, { useState, useContext } from "react";
+import React, { useContext } from "react";
 import { GameType, Team, TeamName } from "../../state/GameState";
 import { CenteredRow, CenteredColumn } from "../common/LayoutElements";
 import { GameModelContext } from "../../state/GameModelContext";
-import { Button } from "../common/Button";
 import { useTranslation } from "react-i18next";
+import { PlayerManagementCard, SectionTitle } from "./PlayerManagement";
+import { RoomAction } from "../../network/roomApi";
 
 export function Scoreboard() {
   const { t } = useTranslation();
-  const { gameState } = useContext(GameModelContext);
+  const { gameState, submitAction } = useContext(GameModelContext);
 
   const style = {
     borderTop: "1px solid black",
     margin: 16,
     paddingTop: 16,
-    alignItems: "center",
+    alignItems: "stretch",
   };
 
   const observers = Object.keys(gameState.players).filter(
@@ -34,24 +35,30 @@ export function Scoreboard() {
         </>
       )}
       {gameState.gameType === GameType.Teams ? (
-        <CenteredRow style={{ width: "100%", alignItems: "flex-start" }}>
-          <TeamColumn team={Team.Left} score={gameState.leftScore} />
-          <TeamColumn team={Team.Right} score={gameState.rightScore} />
+        <CenteredRow style={{ width: "100%", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
+          <TeamColumn team={Team.Left} score={gameState.leftScore} submitAction={submitAction} />
+          <TeamColumn team={Team.Right} score={gameState.rightScore} submitAction={submitAction} />
         </CenteredRow>
       ) : (
-        <CenteredRow style={{ flexWrap: "wrap" }}>
+        <CenteredColumn style={{ alignItems: "stretch", gap: 10 }}>
           {Object.keys(gameState.players)
             .filter((playerId) => !gameState.players[playerId].isObserver)
             .map((playerId) => (
-              <PlayerRow key={playerId} playerId={playerId} />
+              <PlayerManagementCard
+                key={playerId}
+                playerId={playerId}
+                submitAction={submitAction}
+              />
             ))}
-        </CenteredRow>
+        </CenteredColumn>
       )}
       {observers.length > 0 && (
-        <CenteredColumn style={{ alignItems: "flex-start", marginTop: 12 }}>
-          <div>{t("scoreboard.observers", "Observers")}</div>
+        <CenteredColumn style={{ alignItems: "stretch", marginTop: 12 }}>
+          <SectionTitle>{t("scoreboard.observers", "Observers")}</SectionTitle>
           {observers.map((playerId) => (
-            <PlayerRow key={playerId} playerId={playerId} />
+            <div key={playerId} style={{ marginBottom: 10 }}>
+              <PlayerManagementCard playerId={playerId} submitAction={submitAction} />
+            </div>
           ))}
         </CenteredColumn>
       )}
@@ -59,7 +66,7 @@ export function Scoreboard() {
   );
 }
 
-function TeamColumn(props: { team: Team; score: number }) {
+function TeamColumn(props: { team: Team; score: number; submitAction: (action: RoomAction) => void }) {
   const { t } = useTranslation();
   const { gameState } = useContext(GameModelContext);
 
@@ -70,101 +77,26 @@ function TeamColumn(props: { team: Team; score: number }) {
   );
 
   return (
-    <CenteredColumn style={{ alignItems: "flex-start" }}>
-      <div>
+    <CenteredColumn
+      style={{
+        alignItems: "stretch",
+        flex: 1,
+        minWidth: 220,
+        border: "1px solid #d1d5db",
+        borderRadius: 16,
+        backgroundColor: "#f9fafb",
+        padding: 16,
+        boxSizing: "border-box",
+      }}
+    >
+      <div style={{ marginBottom: 12, fontWeight: 700 }}>
         {TeamName(props.team, t)}: <strong>{props.score}</strong> {t("scoreboard.points")}
       </div>
       {members.map((playerId) => (
-        <PlayerRow key={playerId} playerId={playerId} />
+        <div key={playerId} style={{ marginBottom: 10 }}>
+          <PlayerManagementCard playerId={playerId} submitAction={props.submitAction} />
+        </div>
       ))}
     </CenteredColumn>
-  );
-}
-
-function PlayerRow(props: { playerId: string }) {
-  const { gameState, localPlayer, submitAction } = useContext(GameModelContext);
-  const player = gameState.players[props.playerId];
-  const [expanded, setExpanded] = useState(false);
-  const isCreator = props.playerId === gameState.creatorId;
-  const badges = [
-    player.isModerator ? "M" : null,
-    player.isRepresentative ? "R" : null,
-    player.isObserver ? "O" : null,
-    gameState.psychicIds.includes(props.playerId) ? "P" : null,
-    gameState.viewer.playerId === props.playerId && gameState.viewer.isTemporaryRep ? "T" : null,
-  ].filter(Boolean);
-
-  return (
-    <div style={{ marginLeft: 16, display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
-      <div
-        style={{ cursor: gameState.viewer.canManageRoom ? "pointer" : "default" }}
-        onClick={() => gameState.viewer.canManageRoom && setExpanded(!expanded)}
-      >
-        {player.name} {badges.length > 0 ? `[${badges.join(",")}]` : ""}
-        {isCreator ? " ★" : ""}
-        {localPlayer.id === props.playerId ? " (you)" : ""}
-      </div>
-      {expanded && gameState.viewer.canManageRoom && props.playerId !== localPlayer.id && (
-        <div style={{ display: "flex", flexWrap: "wrap" }}>
-          <Button
-            text={player.isRepresentative ? "Unset rep" : "Make rep"}
-            onClick={() =>
-              submitAction({
-                type: "set_representative",
-                playerId: props.playerId,
-                value: !player.isRepresentative,
-              })
-            }
-          />
-          <Button
-            text={player.isObserver ? "Rejoin" : "Observe"}
-            onClick={() =>
-              submitAction({
-                type: "set_observer",
-                playerId: props.playerId,
-                value: !player.isObserver,
-              })
-            }
-          />
-          {gameState.gameType === GameType.Teams && !player.isObserver && (
-            <>
-              <Button
-                text="Left team"
-                onClick={() =>
-                  submitAction({
-                    type: "set_team",
-                    playerId: props.playerId,
-                    team: Team.Left,
-                  })
-                }
-                disabled={player.team === Team.Left}
-              />
-              <Button
-                text="Right team"
-                onClick={() =>
-                  submitAction({
-                    type: "set_team",
-                    playerId: props.playerId,
-                    team: Team.Right,
-                  })
-                }
-                disabled={player.team === Team.Right}
-              />
-            </>
-          )}
-          <Button
-            text={player.isModerator ? "Demote mod" : "Promote mod"}
-            onClick={() =>
-              submitAction({
-                type: "set_moderator",
-                playerId: props.playerId,
-                value: !player.isModerator,
-              })
-            }
-            disabled={isCreator}
-          />
-        </div>
-      )}
-    </div>
   );
 }

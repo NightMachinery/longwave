@@ -1,15 +1,11 @@
 {
   "commonfooter": {
-    "developed_by": "wurde von Wolfgang Warsch, Alex Hague und Justin Vickers entwickelt.",
-    "adapted_for_web": "Adapted for web",
-    "adapted_for_web_by": "von Evan Bailey und Margarethe Schoen.",
-    "support_patreon": "Support us on Patreon!"
+    "open_source": "Longwave ist Open Source auf"
   },
   "landingpage": {
     "create_room": "Erzeuge Raum",
     "longwave": "Longwave",
-    "adaptation": "ist eine Online in Realzeit laufende Adaption des Spiels",
-    "wavelength": "Wavelength",
+    "tagline": "ist ein Echtzeit-Partyspiel für Remote-Gruppen.",
     "best_enjoyed": "Macht per Sprach-Chat am meisten Spass!"
   },
   "roomidheader": {
@@ -62,7 +58,10 @@
     "join_team": "Team beitreten",
     "join_left": "Beitreten",
     "join_right": "Beitreten",
-    "start_game": "Starte Spiel"
+    "start_game": "Starte Spiel",
+    "assign_players": "Manage players",
+    "unassigned_count": "Unassigned players: {{count}}",
+    "waiting_for_mod": "Waiting for a moderator to start the game."
   },
   "makeguess": {
     "players_clue": "{{givername}}'s Hinweis",
@@ -80,12 +79,14 @@
     "last_card": "Letzte Karte!",
     "card_remaining": "Karten verbleiben",
     "coop_score": "Koop Punktestand",
-    "points": "PUNKTE"
+    "points": "PUNKTE",
+    "observers": "Observers"
   },
   "setupgame": {
     "standard_game": "Standard (Teams): 4+ Spieler",
     "coop_game": "Koop Modus: 2+ Spieler",
-    "free_game": "Freies Spiel: 2+ Spieler"
+    "free_game": "Freies Spiel: 2+ Spieler",
+    "waiting_for_mod": "Waiting for a moderator to choose a mode."
   },
   "viewscore": {
     "player_clue": "{{givername}}'s Hinweis",
@@ -102,5 +103,23 @@
     "draw_next_card": "Ziehe nächste Spektrum Karte",
     "score": "Punktestand",
     "got": "erhielt"
+  },
+  "playercard": {
+    "creator": "Creator",
+    "you": "You",
+    "moderator": "Moderator",
+    "representative": "Representative",
+    "observer": "Observer",
+    "psychic": "Psychic",
+    "temporary_rep": "Temporary rep",
+    "observing": "Watching this room",
+    "active_player": "Active player",
+    "team_assignment": "Team",
+    "remove_rep": "Remove rep",
+    "make_rep": "Make rep",
+    "rejoin": "Rejoin",
+    "observe": "Observe",
+    "demote_mod": "Demote mod",
+    "promote_mod": "Promote mod"
   }
 }

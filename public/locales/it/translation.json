@@ -1,15 +1,11 @@
 {
   "commonfooter": {
-    "developed_by": "è stato ideato da Wolfgang Warsch, Alex Hague e Justin Vickers.",
-    "adapted_for_web": "Riadattato per il web",
-    "adapted_for_web_by": "da Evan Bailey e Margarethe Schoen.",
-    "support_patreon": "Supportaci su Patreon!"
+    "open_source": "Longwave è open source su"
   },
   "landingpage": {
     "create_room": "Crea stanza",
     "longwave": "Longwave",
-    "adaptation": "è una version online, riadattata per l'interazione real-time, del gioco da tavolo",
-    "wavelength": "Wavelength",
+    "tagline": "è un party game in tempo reale per gruppi remoti.",
     "best_enjoyed": "Ideale con una chat vocale!"
   },
   "roomidheader": {
@@ -62,7 +58,10 @@
     "join_team": "Unisciti alla squadra",
     "join_left": "Unisciti",
     "join_right": "Unisciti",
-    "start_game": "Avvia gioco"
+    "start_game": "Avvia gioco",
+    "assign_players": "Manage players",
+    "unassigned_count": "Unassigned players: {{count}}",
+    "waiting_for_mod": "Waiting for a moderator to start the game."
   },
   "makeguess": {
     "players_clue": "L'indizio di {{givername}}",
@@ -80,12 +79,14 @@
     "last_card": "Ultima carta!",
     "card_remaining": "Carte rimanenti",
     "coop_score": "Punteggio Cooperative",
-    "points": "PUNTI"
+    "points": "PUNTI",
+    "observers": "Observers"
   },
   "setupgame": {
     "standard_game": "Classica (S): 4+ Giocatori",
     "coop_game": "Cooperativa: 2+ Giocatori",
-    "free_game": "Partita Libera: 2+ Giocatori"
+    "free_game": "Partita Libera: 2+ Giocatori",
+    "waiting_for_mod": "Waiting for a moderator to choose a mode."
   },
   "viewscore": {
     "player_clue": "L'indizio di {{givername}}",
@@ -102,5 +103,23 @@
     "draw_next_card": "Estrai la carta Spectrum successiva",
     "score": "Punteggio",
     "got": "riceve"
+  },
+  "playercard": {
+    "creator": "Creator",
+    "you": "You",
+    "moderator": "Moderator",
+    "representative": "Representative",
+    "observer": "Observer",
+    "psychic": "Psychic",
+    "temporary_rep": "Temporary rep",
+    "observing": "Watching this room",
+    "active_player": "Active player",
+    "team_assignment": "Team",
+    "remove_rep": "Remove rep",
+    "make_rep": "Make rep",
+    "rejoin": "Rejoin",
+    "observe": "Observe",
+    "demote_mod": "Demote mod",
+    "promote_mod": "Promote mod"
   }
 }

@@ -45,10 +45,7 @@ Sample:
 ```json
 {
     "commonfooter": {
-        "developed_by": "was developed by Wolfgang Warsch, Alex Hague and Justin Vickers.",
-        "adapted_for_web": "Adapted for web",
-        "adapted_for_web_by": "by Evan Bailey and Margarethe Schoen.",
-        "support_patreon": "Support us on Patreon!"
+        "open_source": "Longwave is open source on"
     },
     "landingpage": {
     ...

@@ -27,8 +27,7 @@ export function LandingPage() {
         <LanguageMenu />
       </CenteredRow>
       <p style={{ margin: 8 }}>
-        <strong>{t("landingpage.longwave")}</strong>{" "}
-        {t("landingpage.adaptation")} <em>{t("landingpage.wavelength")}</em>.{" "}
+        <strong>{t("landingpage.longwave")}</strong> {t("landingpage.tagline")}{" "}
         {t("landingpage.best_enjoyed")}
       </p>
     </CenteredColumn>

@@ -4,6 +4,7 @@ import { CenteredColumn, CenteredRow } from "../common/LayoutElements";
 import { Button } from "../common/Button";
 import { GameModelContext } from "../../state/GameModelContext";
 import { useTranslation } from "react-i18next";
+import { PlayerManagementCard, SectionTitle } from "./PlayerManagement";
 
 export function JoinTeam() {
   const { t } = useTranslation();
@@ -24,13 +25,11 @@ export function JoinTeam() {
   );
 
   const joinTeam = (team: Team) => submitAction({ type: "join_team", team });
-  const assignTeam = (playerId: string, team: Team) =>
-    submitAction({ type: "set_team", playerId, team });
 
   return (
-    <CenteredColumn>
-      <div>{t("jointeam.join_team")}:</div>
-      <CenteredRow style={{ alignItems: "flex-start", width: "100%" }}>
+    <CenteredColumn style={{ alignItems: "stretch", gap: 16 }}>
+      <SectionTitle>{t("jointeam.join_team")}:</SectionTitle>
+      <CenteredRow style={{ alignItems: "stretch", width: "100%", gap: 12, flexWrap: "wrap" }}>
         <TeamPane
           title={TeamName(Team.Left, t)}
           members={leftTeam.map((playerId) => gameState.players[playerId].name)}
@@ -47,32 +46,24 @@ export function JoinTeam() {
         />
       </CenteredRow>
       {canManageRoom && (
-        <CenteredColumn style={{ alignItems: "flex-start", marginTop: 16 }}>
-          <div>{t("jointeam.assign_players", "Assign players")}</div>
-          {activePlayers.map((playerId) => {
-            const player = gameState.players[playerId];
-            return (
-              <CenteredRow key={playerId} style={{ gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                <div>
-                  {player.name}
-                  {playerId === localPlayer.id ? ` ${t("jointeam.you", "(you)")}` : ""}
-                  {player.team === Team.Unset ? ` — ${t("jointeam.unassigned", "unassigned")}` : ""}
-                </div>
-                <Button
-                  text={t("jointeam.assign_left", "Left")}
-                  onClick={() => assignTeam(playerId, Team.Left)}
-                  disabled={player.team === Team.Left}
-                />
-                <Button
-                  text={t("jointeam.assign_right", "Right")}
-                  onClick={() => assignTeam(playerId, Team.Right)}
-                  disabled={player.team === Team.Right}
-                />
-              </CenteredRow>
-            );
-          })}
+        <CenteredColumn style={{ alignItems: "stretch", marginTop: 8 }}>
+          <SectionTitle>{t("jointeam.assign_players", "Manage players")}</SectionTitle>
+          {Object.keys(gameState.players).map((playerId) => (
+            <div key={playerId} style={{ marginBottom: 10, width: "100%" }}>
+              <PlayerManagementCard
+                playerId={playerId}
+                showTeamSelector
+                submitAction={submitAction}
+              />
+            </div>
+          ))}
           {unassignedPlayers.length > 0 && (
-            <div>{t("jointeam.unassigned_count", { defaultValue: "Unassigned players: {{count}}", count: unassignedPlayers.length })}</div>
+            <div>
+              {t("jointeam.unassigned_count", {
+                defaultValue: "Unassigned players: {{count}}",
+                count: unassignedPlayers.length,
+              })}
+            </div>
           )}
         </CenteredColumn>
       )}
@@ -81,6 +72,7 @@ export function JoinTeam() {
           text={t("jointeam.start_game")}
           onClick={() => submitAction({ type: "start_round" })}
           disabled={!gameState.viewer.canStartRound}
+          style={{ alignSelf: "flex-start" }}
         />
       )}
       {gameState.roundPhase === RoundPhase.PickTeams && !gameState.viewer.canStartRound && !canManageRoom && (
@@ -98,12 +90,33 @@ function TeamPane(props: {
   disabled: boolean;
 }) {
   return (
-    <CenteredColumn style={{ alignItems: "flex-start", minWidth: 160 }}>
-      <div>{props.title}</div>
+    <CenteredColumn
+      style={{
+        alignItems: "stretch",
+        minWidth: 220,
+        flex: 1,
+        border: "1px solid #d1d5db",
+        borderRadius: 16,
+        backgroundColor: "#f9fafb",
+        padding: 16,
+        boxSizing: "border-box",
+      }}
+    >
+      <div style={{ fontWeight: 700, marginBottom: 8 }}>{props.title}</div>
+      {props.members.length === 0 && (
+        <div style={{ color: "#6b7280", marginBottom: 8 }}>—</div>
+      )}
       {props.members.map((member) => (
-        <div key={member}>{member}</div>
+        <div key={member} style={{ marginBottom: 6 }}>
+          {member}
+        </div>
       ))}
-      <Button text={props.buttonText} onClick={props.onJoin} disabled={props.disabled} />
+      <Button
+        text={props.buttonText}
+        onClick={props.onJoin}
+        disabled={props.disabled}
+        style={{ alignSelf: "flex-start", marginLeft: 0, marginTop: 12 }}
+      />
     </CenteredColumn>
   );
 }
