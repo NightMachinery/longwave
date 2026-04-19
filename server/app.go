@@ -52,6 +52,14 @@ type migrateResponse struct {
 	URL string `json:"url"`
 }
 
+type authenticatedRoomResult struct {
+	room            RoomState
+	playerID        string
+	ok              bool
+	canonicalRoomID string
+	stale           bool
+}
+
 func ConfigFromEnv() (Config, error) {
 	roomTTL := defaultRoomTTL
 	if envRoomTTL := strings.TrimSpace(os.Getenv("LONGWAVE_ROOM_TTL")); envRoomTTL != "" {
@@ -175,6 +183,45 @@ func (app *App) handleJoinRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sessionSecret := readSessionCookie(r)
+	if requestedRoom, found, err := app.store.LoadRoom(r.Context(), roomID, false); err != nil {
+		writeJSONError(w, http.StatusInternalServerError, err.Error())
+		return
+	} else if found && requestedRoom.RedirectRoomID != "" {
+		targetRoom, targetFound, err := app.store.LoadRoom(r.Context(), requestedRoom.RedirectRoomID, true)
+		if err != nil {
+			writeJSONError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if !targetFound {
+			writeJSONErrorValue(w, http.StatusGone, map[string]string{
+				"error": "room link is stale",
+				"code":  "stale_room_link",
+			})
+			return
+		}
+		if playerID, ok := authenticatedPlayer(&targetRoom, sessionSecret); ok {
+			updatedRoom, err := app.store.UpdateRoom(r.Context(), requestedRoom.RedirectRoomID, func(room *RoomState, _ bool) error {
+				player := room.Players[playerID]
+				if strings.TrimSpace(request.PlayerName) != "" {
+					player.Name = strings.TrimSpace(request.PlayerName)
+					room.Players[playerID] = player
+				}
+				return nil
+			})
+			if err != nil {
+				writeJSONError(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+			setSessionCookie(w, updatedRoom.Players[playerID].SessionSecret)
+			writeJSONResponseValue(w, http.StatusOK, sanitizeRoomForViewer(updatedRoom, requestedRoom.RedirectRoomID, playerID))
+			return
+		}
+		writeJSONErrorValue(w, http.StatusGone, map[string]string{
+			"error": "room link is stale",
+			"code":  "stale_room_link",
+		})
+		return
+	}
 	joinedPlayerID := ""
 	room, err := app.store.UpdateRoom(r.Context(), roomID, func(room *RoomState, found bool) error {
 		if !found {
@@ -228,26 +275,33 @@ func (app *App) handleJoinRoom(w http.ResponseWriter, r *http.Request) {
 	playerID := joinedPlayerID
 	setSessionCookie(w, room.Players[playerID].SessionSecret)
 	app.hub.Broadcast(roomID)
-	writeJSONResponseValue(w, http.StatusOK, sanitizeRoomForViewer(room, playerID))
+	writeJSONResponseValue(w, http.StatusOK, sanitizeRoomForViewer(room, roomID, playerID))
 }
 
 func (app *App) handleMigrateRoom(w http.ResponseWriter, r *http.Request) {
 	roomID := strings.TrimSpace(r.PathValue("roomID"))
-	_, playerID, ok, err := app.authenticatedRoom(r.Context(), roomID, r)
+	result, err := app.authenticatedRoom(r.Context(), roomID, r)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	if !ok {
+	if result.stale {
+		writeJSONErrorValue(w, http.StatusGone, map[string]string{
+			"error": "room link is stale",
+			"code":  "stale_room_link",
+		})
+		return
+	}
+	if !result.ok {
 		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 		return
 	}
-	room, err := app.store.UpdateRoom(r.Context(), roomID, func(current *RoomState, _ bool) error {
+	room, err := app.store.UpdateRoom(r.Context(), result.canonicalRoomID, func(current *RoomState, _ bool) error {
 		token := randomToken(16)
 		if current.MigrationTokens == nil {
 			current.MigrationTokens = map[string]string{}
 		}
-		current.MigrationTokens[token] = playerID
+		current.MigrationTokens[token] = result.playerID
 		return nil
 	})
 	if err != nil {
@@ -256,36 +310,49 @@ func (app *App) handleMigrateRoom(w http.ResponseWriter, r *http.Request) {
 	}
 	var token string
 	for migrationToken, migrationPlayerID := range room.MigrationTokens {
-		if migrationPlayerID == playerID {
+		if migrationPlayerID == result.playerID {
 			token = migrationToken
 		}
 	}
-	writeJSONResponseValue(w, http.StatusOK, migrateResponse{URL: buildMigrationURL(r, roomID, token)})
+	writeJSONResponseValue(w, http.StatusOK, migrateResponse{URL: buildMigrationURL(r, result.canonicalRoomID, token)})
 }
 
 func (app *App) handleGetRoom(w http.ResponseWriter, r *http.Request) {
 	roomID := strings.TrimSpace(r.PathValue("roomID"))
-	room, playerID, ok, err := app.authenticatedRoom(r.Context(), roomID, r)
+	result, err := app.authenticatedRoom(r.Context(), roomID, r)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	if !ok {
+	if result.stale {
+		writeJSONErrorValue(w, http.StatusGone, map[string]string{
+			"error": "room link is stale",
+			"code":  "stale_room_link",
+		})
+		return
+	}
+	if !result.ok {
 		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 		return
 	}
-	writeJSONResponseValue(w, http.StatusOK, sanitizeRoomForViewer(room, playerID))
+	writeJSONResponseValue(w, http.StatusOK, sanitizeRoomForViewer(result.room, result.canonicalRoomID, result.playerID))
 }
 
 func (app *App) handleRoomAction(w http.ResponseWriter, r *http.Request) {
 	roomID := strings.TrimSpace(r.PathValue("roomID"))
-	room, playerID, ok, err := app.authenticatedRoom(r.Context(), roomID, r)
-	_ = room
+	result, err := app.authenticatedRoom(r.Context(), roomID, r)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	if !ok {
+	if result.stale {
+		writeJSONErrorValue(w, http.StatusGone, map[string]string{
+			"error": "room link is stale",
+			"code":  "stale_room_link",
+		})
+		return
+	}
+	if !result.ok {
 		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 		return
 	}
@@ -294,11 +361,35 @@ func (app *App) handleRoomAction(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	updatedRoom, err := app.store.UpdateRoom(r.Context(), roomID, func(room *RoomState, _ bool) error {
-		if _, ok := room.Players[playerID]; !ok {
+	if action.Type == "reset_room_id" {
+		newRoomID, updatedRoom, err := app.store.ResetRoomID(r.Context(), result.canonicalRoomID, func(room *RoomState) error {
+			player, ok := room.Players[result.playerID]
+			if !ok {
+				return errUnauthorized
+			}
+			if !player.IsModerator {
+				return errUnauthorized
+			}
+			return nil
+		})
+		if err != nil {
+			status := http.StatusInternalServerError
+			if errors.Is(err, errUnauthorized) {
+				status = http.StatusForbidden
+			}
+			writeJSONError(w, status, err.Error())
+			return
+		}
+		app.hub.Broadcast(result.canonicalRoomID)
+		app.hub.Broadcast(newRoomID)
+		writeJSONResponseValue(w, http.StatusOK, sanitizeRoomForViewer(updatedRoom, newRoomID, result.playerID))
+		return
+	}
+	updatedRoom, err := app.store.UpdateRoom(r.Context(), result.canonicalRoomID, func(room *RoomState, _ bool) error {
+		if _, ok := room.Players[result.playerID]; !ok {
 			return errUnauthorized
 		}
-		if err := applyAction(room, playerID, action); err != nil {
+		if err := applyAction(room, result.playerID, action); err != nil {
 			return err
 		}
 		normalizeRoundState(room)
@@ -308,14 +399,23 @@ func (app *App) handleRoomAction(w http.ResponseWriter, r *http.Request) {
 		status := http.StatusInternalServerError
 		if errors.Is(err, errUnauthorized) {
 			status = http.StatusForbidden
-		} else if strings.Contains(err.Error(), "required") || strings.Contains(err.Error(), "cannot") || strings.Contains(err.Error(), "unsupported") {
+		} else if strings.Contains(err.Error(), "required") ||
+			strings.Contains(err.Error(), "cannot") ||
+			strings.Contains(err.Error(), "unsupported") ||
+			strings.Contains(err.Error(), "only") ||
+			strings.Contains(err.Error(), "not found") ||
+			strings.Contains(err.Error(), "must be") ||
+			strings.Contains(err.Error(), "reached") ||
+			strings.Contains(err.Error(), "closed") ||
+			strings.Contains(err.Error(), "available") ||
+			strings.Contains(err.Error(), "join a team") {
 			status = http.StatusBadRequest
 		}
 		writeJSONError(w, status, err.Error())
 		return
 	}
-	app.hub.Broadcast(roomID)
-	writeJSONResponseValue(w, http.StatusOK, sanitizeRoomForViewer(updatedRoom, playerID))
+	app.hub.Broadcast(result.canonicalRoomID)
+	writeJSONResponseValue(w, http.StatusOK, sanitizeRoomForViewer(updatedRoom, result.canonicalRoomID, result.playerID))
 }
 
 func (app *App) handleRoomEvents(w http.ResponseWriter, r *http.Request) {
@@ -325,12 +425,19 @@ func (app *App) handleRoomEvents(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusInternalServerError, "streaming is not supported")
 		return
 	}
-	_, playerID, authOK, err := app.authenticatedRoom(r.Context(), roomID, r)
+	result, err := app.authenticatedRoom(r.Context(), roomID, r)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	if !authOK {
+	if result.stale {
+		writeJSONErrorValue(w, http.StatusGone, map[string]string{
+			"error": "room link is stale",
+			"code":  "stale_room_link",
+		})
+		return
+	}
+	if !result.ok {
 		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 		return
 	}
@@ -342,8 +449,8 @@ func (app *App) handleRoomEvents(w http.ResponseWriter, r *http.Request) {
 	flusher.Flush()
 	events, unsubscribe := app.hub.Subscribe(roomID)
 	defer unsubscribe()
-	if room, _, ok, err := app.authenticatedRoom(r.Context(), roomID, r); err == nil && ok {
-		writeSSEMessageValue(w, flusher, sanitizeRoomForViewer(room, playerID))
+	if nextResult, err := app.authenticatedRoom(r.Context(), roomID, r); err == nil && nextResult.ok {
+		writeSSEMessageValue(w, flusher, sanitizeRoomForViewer(nextResult.room, nextResult.canonicalRoomID, nextResult.playerID))
 	}
 	keepAliveTicker := time.NewTicker(30 * time.Second)
 	defer keepAliveTicker.Stop()
@@ -355,11 +462,11 @@ func (app *App) handleRoomEvents(w http.ResponseWriter, r *http.Request) {
 			if !ok {
 				return
 			}
-			room, _, authOK, err := app.authenticatedRoom(r.Context(), roomID, r)
-			if err != nil || !authOK {
+			nextResult, err := app.authenticatedRoom(r.Context(), roomID, r)
+			if err != nil || !nextResult.ok {
 				return
 			}
-			writeSSEMessageValue(w, flusher, sanitizeRoomForViewer(room, playerID))
+			writeSSEMessageValue(w, flusher, sanitizeRoomForViewer(nextResult.room, nextResult.canonicalRoomID, nextResult.playerID))
 		case <-keepAliveTicker.C:
 			_, _ = io.WriteString(w, ": keepalive\n\n")
 			flusher.Flush()
@@ -367,16 +474,40 @@ func (app *App) handleRoomEvents(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (app *App) authenticatedRoom(ctx context.Context, roomID string, r *http.Request) (RoomState, string, bool, error) {
+func (app *App) authenticatedRoom(ctx context.Context, roomID string, r *http.Request) (authenticatedRoomResult, error) {
 	room, found, err := app.store.LoadRoom(ctx, roomID, true)
 	if err != nil {
-		return RoomState{}, "", false, err
+		return authenticatedRoomResult{}, err
 	}
 	if !found {
-		return RoomState{}, "", false, nil
+		return authenticatedRoomResult{}, nil
+	}
+	if room.RedirectRoomID != "" {
+		redirectedRoom, redirectedFound, err := app.store.LoadRoom(ctx, room.RedirectRoomID, true)
+		if err != nil {
+			return authenticatedRoomResult{}, err
+		}
+		if !redirectedFound {
+			return authenticatedRoomResult{stale: true, canonicalRoomID: room.RedirectRoomID}, nil
+		}
+		playerID, ok := authenticatedPlayer(&redirectedRoom, readSessionCookie(r))
+		if !ok {
+			return authenticatedRoomResult{stale: true, canonicalRoomID: room.RedirectRoomID}, nil
+		}
+		return authenticatedRoomResult{
+			room:            redirectedRoom,
+			playerID:        playerID,
+			ok:              true,
+			canonicalRoomID: room.RedirectRoomID,
+		}, nil
 	}
 	playerID, ok := authenticatedPlayer(&room, readSessionCookie(r))
-	return room, playerID, ok, nil
+	return authenticatedRoomResult{
+		room:            room,
+		playerID:        playerID,
+		ok:              ok,
+		canonicalRoomID: roomID,
+	}, nil
 }
 
 func authenticatedPlayer(room *RoomState, sessionSecret string) (string, bool) {
@@ -442,13 +573,17 @@ func writeJSONResponse(w http.ResponseWriter, status int, payload []byte) {
 	_, _ = w.Write(payload)
 }
 
-func writeJSONError(w http.ResponseWriter, status int, message string) {
-	responseBody, err := json.Marshal(map[string]string{"error": message})
+func writeJSONErrorValue(w http.ResponseWriter, status int, payload map[string]string) {
+	responseBody, err := json.Marshal(payload)
 	if err != nil {
-		http.Error(w, message, status)
+		http.Error(w, payload["error"], status)
 		return
 	}
 	writeJSONResponse(w, status, responseBody)
+}
+
+func writeJSONError(w http.ResponseWriter, status int, message string) {
+	writeJSONErrorValue(w, status, map[string]string{"error": message})
 }
 
 func spaHandler(buildDir string) http.Handler {

@@ -16,7 +16,7 @@ export function CommonFooter() {
     >
       <p style={{ margin: 8, textAlign: "center" }}>
         {t("commonfooter.open_source")}{" "}
-        <a href="https://github.com/cynicaloptimist/longwave" target="_blank" rel="noopener noreferrer">
+        <a href="https://github.com/NightMachinery/longwave" target="_blank" rel="noopener noreferrer">
           GitHub
         </a>
       </p>

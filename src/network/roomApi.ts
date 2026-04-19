@@ -15,17 +15,44 @@ export type RoomAction =
   | { type: "set_moderator"; playerId: string; value: boolean }
   | { type: "set_representative"; playerId: string; value: boolean }
   | { type: "set_observer"; playerId: string; value: boolean }
-  | { type: "reset_room" };
+  | { type: "reset_room" }
+  | { type: "play_again" }
+  | { type: "reroll_round" }
+  | { type: "reset_room_id" };
+
+export class RoomApiError extends Error {
+  status: number;
+  payload: Record<string, unknown> | null;
+
+  constructor(message: string, status: number, payload: Record<string, unknown> | null) {
+    super(message);
+    this.name = "RoomApiError";
+    this.status = status;
+    this.payload = payload;
+  }
+
+  get code() {
+    return typeof this.payload?.code === "string" ? this.payload.code : null;
+  }
+}
 
 const roomApiPath = (roomId: string) =>
   `/api/rooms/${encodeURIComponent(roomId)}`;
 
 async function parseJsonResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
-    const errorPayload = await response.text();
-    throw new Error(
-      `Unexpected ${response.status} response from ${response.url}: ${errorPayload}`
-    );
+    const responseText = await response.text();
+    let payload: Record<string, unknown> | null = null;
+    try {
+      payload = JSON.parse(responseText) as Record<string, unknown>;
+    } catch (error) {
+      payload = null;
+    }
+    const message =
+      typeof payload?.error === "string"
+        ? payload.error
+        : `Unexpected ${response.status} response from ${response.url}: ${responseText}`;
+    throw new RoomApiError(message, response.status, payload);
   }
 
   return response.json() as Promise<T>;

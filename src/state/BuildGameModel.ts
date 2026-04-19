@@ -23,7 +23,7 @@ export interface GameModel {
   spectrumCard: [string, string];
   previousSpectrumCard: [string, string] | null;
   submitAction: (action: RoomAction) => void;
-  setPlayerName: (newName: string) => void;
+  openNameEditor: () => void;
 }
 
 const getSeededDeck = memoize((seed: string, cards: [string, string][]) =>
@@ -51,7 +51,7 @@ export function BuildGameModel(
   gameState: GameState,
   submitAction: (action: RoomAction) => void,
   tSpectrumCards: TFunction<"spectrum-cards">,
-  setPlayerName: (newName: string) => void
+  openNameEditor: () => void
 ): GameModel {
   const players = gameState.players ?? {};
   const psychicIds = gameState.psychicIds ?? [];
@@ -95,6 +95,6 @@ export function BuildGameModel(
             tSpectrumCards
           ),
     submitAction,
-    setPlayerName,
+    openNameEditor,
   };
 }

@@ -3,6 +3,7 @@ import { TFunction } from "i18next";
 
 export enum RoundPhase {
   SetupGame,
+  Ready,
   PickTeams,
   GiveClue,
   MakeGuess,
@@ -85,6 +86,7 @@ export type ViewerState = {
 };
 
 export interface GameState {
+  roomId: string;
   gameType: GameType;
   roundPhase: RoundPhase;
   turnsTaken: number;
@@ -111,6 +113,7 @@ export interface GameState {
 
 export function InitialGameState(deckLanguage: string = "en"): GameState {
   return {
+    roomId: "",
     gameType: GameType.Teams,
     roundPhase: RoundPhase.SetupGame,
     turnsTaken: -1,

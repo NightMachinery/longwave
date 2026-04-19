@@ -67,11 +67,21 @@ function NextTurnOrEndGame() {
   const { gameState, submitAction } = useContext(GameModelContext);
 
   if (gameState.leftScore >= 10 && gameState.leftScore > gameState.rightScore) {
-    return <div>{t("viewscore.winning_team", { winnerteam: TeamName(Team.Left, t) })}</div>;
+    return (
+      <>
+        <div>{t("viewscore.winning_team", { winnerteam: TeamName(Team.Left, t) })}</div>
+        <PlayAgainButton />
+      </>
+    );
   }
 
   if (gameState.rightScore >= 10 && gameState.rightScore > gameState.leftScore) {
-    return <div>{t("viewscore.winning_team", { winnerteam: TeamName(Team.Right, t) })}</div>;
+    return (
+      <>
+        <div>{t("viewscore.winning_team", { winnerteam: TeamName(Team.Right, t) })}</div>
+        <PlayAgainButton />
+      </>
+    );
   }
 
   if (
@@ -84,6 +94,7 @@ function NextTurnOrEndGame() {
         <div>
           {t("viewscore.final_score_team")}: <strong>{gameState.coopScore} {t("viewscore.points")}</strong>
         </div>
+        <PlayAgainButton />
       </>
     );
   }
@@ -128,5 +139,21 @@ function NextTurnOrEndGame() {
         <div>{t("viewscore.next_team", "Next team")}: {TeamName(nextTeam, t)}</div>
       )}
     </>
+  );
+}
+
+function PlayAgainButton() {
+  const { t } = useTranslation();
+  const { gameState, submitAction } = useContext(GameModelContext);
+
+  if (!gameState.viewer.canManageRoom) {
+    return null;
+  }
+
+  return (
+    <Button
+      text={t("viewscore.play_again", "Play again")}
+      onClick={() => submitAction({ type: "play_again" })}
+    />
   );
 }

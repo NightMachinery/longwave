@@ -92,8 +92,12 @@ That flow replaces the old Firebase runtime dependency with a local Go + SQLite 
 - Each room now uses a server-issued room session cookie.
 - The first player to join a room becomes the creator and an initial moderator.
 - **Copy room link** shares the clean room URL only.
+- Clicking the visible room ID copies the same clean invite link.
 - **Migrate device** requests a one-time migration link with `?migrate=...` so another device can take over the same in-room identity.
+- **Play Again** restarts the game in the same room while preserving the creator, player list, and room settings.
+- **Reset Room ID** rotates the room code so the previous join link no longer accepts new joins.
 - Hidden round information is filtered by the backend so only current psychics see the target during clueing.
+- Player names are remembered locally per browser and **Change Name** updates the live in-room identity.
 
 ### Available Scripts
 

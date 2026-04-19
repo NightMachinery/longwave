@@ -123,6 +123,65 @@ func (store *Store) UpdateRoom(ctx context.Context, roomID string, fn func(*Room
 	return room, nil
 }
 
+func (store *Store) ResetRoomID(ctx context.Context, currentRoomID string, fn func(*RoomState) error) (string, RoomState, error) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	room, found, err := store.LoadRoom(ctx, currentRoomID, false)
+	if err != nil {
+		return "", RoomState{}, err
+	}
+	if !found {
+		return "", RoomState{}, sql.ErrNoRows
+	}
+	if room.RedirectRoomID != "" {
+		return "", RoomState{}, fmt.Errorf("room id already rotated")
+	}
+	normalizeRoomStateShape(&room)
+	if fn != nil {
+		if err := fn(&room); err != nil {
+			return "", RoomState{}, err
+		}
+	}
+
+	const maxAttempts = 128
+	newRoomID := ""
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		candidate := randomRoomID()
+		if candidate == currentRoomID {
+			continue
+		}
+		_, foundCandidate, err := store.LoadRoom(ctx, candidate, false)
+		if err != nil {
+			return "", RoomState{}, err
+		}
+		if !foundCandidate {
+			newRoomID = candidate
+			break
+		}
+	}
+	if newRoomID == "" {
+		return "", RoomState{}, fmt.Errorf("could not allocate a new room id")
+	}
+
+	if err := store.SaveRoom(ctx, newRoomID, room); err != nil {
+		return "", RoomState{}, err
+	}
+
+	tombstone := InitialRoomState(room.DeckLanguage)
+	tombstone.RedirectRoomID = newRoomID
+	tombstone.Players = map[string]PlayerState{}
+	tombstone.Clues = []Clue{}
+	tombstone.PsychicIDs = []string{}
+	tombstone.PsychicPickCounts = map[string]int{}
+	tombstone.MigrationTokens = map[string]string{}
+	if err := store.SaveRoom(ctx, currentRoomID, tombstone); err != nil {
+		return "", RoomState{}, err
+	}
+
+	return newRoomID, room, nil
+}
+
 func (store *Store) DeleteExpired(ctx context.Context) error {
 	if store.ttl <= 0 {
 		return nil

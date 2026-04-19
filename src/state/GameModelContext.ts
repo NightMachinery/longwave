@@ -21,5 +21,5 @@ export const GameModelContext = createContext<GameModel>({
         JSON.stringify(action)
     );
   },
-  setPlayerName: () => {},
+  openNameEditor: () => {},
 });

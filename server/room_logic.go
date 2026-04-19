@@ -45,6 +45,22 @@ type ActionRequest struct {
 	Value        *bool  `json:"value,omitempty"`
 }
 
+func isTeamGameOver(room *RoomState) bool {
+	return (room.LeftScore >= 10 && room.LeftScore > room.RightScore) ||
+		(room.RightScore >= 10 && room.RightScore > room.LeftScore)
+}
+
+func isCoopGameOver(room *RoomState) bool {
+	return room.GameType == GameTypeCooperative && room.TurnsTaken >= 7+room.CoopBonusTurns
+}
+
+func isGameOver(room *RoomState) bool {
+	if room.RoundPhase != RoundPhaseViewScore {
+		return false
+	}
+	return isTeamGameOver(room) || isCoopGameOver(room)
+}
+
 func applyAction(room *RoomState, viewerID string, action ActionRequest) error {
 	if _, ok := room.Players[viewerID]; !ok {
 		return errUnauthorized
@@ -65,6 +81,7 @@ func applyAction(room *RoomState, viewerID string, action ActionRequest) error {
 			return errUnauthorized
 		}
 		room.GameType = GameType(*action.GameType)
+		room.PsychicPickCounts = map[string]int{}
 		if room.GameType == GameTypeTeams {
 			room.RoundPhase = RoundPhasePickTeams
 			room.ActingTeam = TeamUnset
@@ -193,11 +210,11 @@ func applyAction(room *RoomState, viewerID string, action ActionRequest) error {
 	case "set_moderator":
 		return setPlayerFlag(room, viewerID, action.PlayerID, action.Value, func(p *PlayerState, v bool) {
 			p.IsModerator = v
-		})
+		}, true)
 	case "set_representative":
 		return setPlayerFlag(room, viewerID, action.PlayerID, action.Value, func(p *PlayerState, v bool) {
 			p.IsRepresentative = v
-		})
+		}, false)
 	case "set_observer":
 		if !canManageRoom(room, viewerID) || action.PlayerID == "" || action.Value == nil {
 			return errUnauthorized
@@ -224,30 +241,41 @@ func applyAction(room *RoomState, viewerID string, action ActionRequest) error {
 		room.CreatorID = creatorID
 		room.PsychicCount = psychicCount
 		room.ClueQuota = clueQuota
+		room.PsychicPickCounts = map[string]int{}
+		return nil
+	case "play_again":
+		if !canManageRoom(room, viewerID) {
+			return errUnauthorized
+		}
+		playAgainRoom(room)
+		return nil
+	case "reroll_round":
+		if !canManageRoom(room, viewerID) {
+			return errUnauthorized
+		}
+		return rerollRound(room)
+	case "reset_room_id":
 		return nil
 	default:
 		return fmt.Errorf("unsupported action type %q", action.Type)
 	}
 }
 
-func setPlayerFlag(room *RoomState, viewerID string, targetID string, value *bool, update func(*PlayerState, bool)) error {
+func setPlayerFlag(room *RoomState, viewerID string, targetID string, value *bool, update func(*PlayerState, bool), preventCreatorDisable bool) error {
 	if !canManageRoom(room, viewerID) || targetID == "" || value == nil {
 		return errUnauthorized
-	}
-	if targetID == room.CreatorID && update != nil {
-		// creator mod demotion is blocked below by id check + no-op for moderator only
 	}
 	player, ok := room.Players[targetID]
 	if !ok {
 		return fmt.Errorf("player not found")
 	}
-	if targetID == room.CreatorID {
+	if preventCreatorDisable && targetID == room.CreatorID {
 		if player.IsModerator && !*value {
 			return fmt.Errorf("creator cannot be demoted")
 		}
 	}
 	update(&player, *value)
-	if targetID == room.CreatorID {
+	if preventCreatorDisable && targetID == room.CreatorID {
 		player.IsModerator = true
 	}
 	room.Players[targetID] = player
@@ -314,23 +342,62 @@ func effectiveClueQuota(room *RoomState) int {
 	return quota
 }
 
-func choosePsychics(room *RoomState) []string {
+func choosePsychics(room *RoomState, excluded []string, requestedCount int) []string {
 	eligible := eligiblePsychicIDs(room)
 	if len(eligible) == 0 {
 		return []string{}
 	}
-	count := room.PsychicCount
+	excludedSet := map[string]struct{}{}
+	for _, playerID := range excluded {
+		excludedSet[playerID] = struct{}{}
+	}
+	filteredEligible := make([]string, 0, len(eligible))
+	for _, playerID := range eligible {
+		if _, ok := excludedSet[playerID]; ok {
+			continue
+		}
+		filteredEligible = append(filteredEligible, playerID)
+	}
+	eligible = filteredEligible
+	if len(eligible) == 0 {
+		return []string{}
+	}
+	count := requestedCount
 	if count < 1 {
-		count = 1
+		count = room.PsychicCount
+		if count < 1 {
+			count = 1
+		}
 	}
 	if count > len(eligible) {
 		count = len(eligible)
 	}
 	rng := mathrand.New(mathrand.NewSource(timeSeed()))
-	rng.Shuffle(len(eligible), func(i, j int) {
-		eligible[i], eligible[j] = eligible[j], eligible[i]
-	})
-	selected := append([]string(nil), eligible[:count]...)
+	bucketsByCount := map[int][]string{}
+	counts := make([]int, 0, len(eligible))
+	for _, playerID := range eligible {
+		pickCount := room.PsychicPickCounts[playerID]
+		if _, ok := bucketsByCount[pickCount]; !ok {
+			counts = append(counts, pickCount)
+		}
+		bucketsByCount[pickCount] = append(bucketsByCount[pickCount], playerID)
+	}
+	sort.Ints(counts)
+	selected := make([]string, 0, count)
+	for _, pickCount := range counts {
+		bucket := append([]string(nil), bucketsByCount[pickCount]...)
+		rng.Shuffle(len(bucket), func(i, j int) {
+			bucket[i], bucket[j] = bucket[j], bucket[i]
+		})
+		needed := count - len(selected)
+		if needed <= 0 {
+			break
+		}
+		if needed > len(bucket) {
+			needed = len(bucket)
+		}
+		selected = append(selected, bucket[:needed]...)
+	}
 	sort.Strings(selected)
 	return selected
 }
@@ -406,9 +473,79 @@ func resetScoresForGameType(room *RoomState) {
 	room.ActingTeam = TeamUnset
 }
 
+func playAgainRoom(room *RoomState) {
+	room.DeckSeed = randomDeckSeed()
+	room.LeftScore = 0
+	room.RightScore = 0
+	room.CoopScore = 0
+	room.CoopBonusTurns = 0
+	room.PreviousTurn = nil
+	room.Clues = []Clue{}
+	room.PsychicIDs = []string{}
+	room.Guess = 10
+	room.CounterGuess = "left"
+	room.TurnsTaken = -1
+	room.DeckIndex = 0
+	room.SpectrumTarget = randomSpectrumTarget()
+	room.PsychicPickCounts = map[string]int{}
+	room.MigrationTokens = map[string]string{}
+	if room.GameType == GameTypeTeams {
+		room.RoundPhase = RoundPhasePickTeams
+		room.ActingTeam = TeamUnset
+		return
+	}
+	room.RoundPhase = RoundPhaseReady
+	room.ActingTeam = TeamUnset
+}
+
+func rerollRound(room *RoomState) error {
+	if room.RoundPhase != RoundPhaseGiveClue {
+		return fmt.Errorf("prompt can only be rerolled before clues are submitted")
+	}
+	if len(room.Clues) > 0 {
+		return fmt.Errorf("prompt can only be rerolled before clues are submitted")
+	}
+	room.DeckIndex += 1
+	room.SpectrumTarget = randomSpectrumTarget()
+	room.Guess = 10
+	room.CounterGuess = "left"
+	room.Clues = []Clue{}
+	return nil
+}
+
+func incrementPsychicPickCounts(room *RoomState, psychicIDs []string) {
+	if room.PsychicPickCounts == nil {
+		room.PsychicPickCounts = map[string]int{}
+	}
+	for _, playerID := range psychicIDs {
+		room.PsychicPickCounts[playerID]++
+	}
+}
+
+func nextTeamAfterScore(room *RoomState) Team {
+	nextTeam := teamReverse(room.ActingTeam)
+	score := getScore(room.SpectrumTarget, room.Guess)
+	if score == 4 {
+		if room.ActingTeam == TeamLeft && room.LeftScore < room.RightScore {
+			nextTeam = TeamLeft
+		}
+		if room.ActingTeam == TeamRight && room.RightScore < room.LeftScore {
+			nextTeam = TeamRight
+		}
+	}
+	return nextTeam
+}
+
 func startRound(room *RoomState, viewerID string) error {
 	player, ok := room.Players[viewerID]
 	if !ok || player.IsObserver {
+		return errUnauthorized
+	}
+	if room.RoundPhase == RoundPhaseReady {
+		if !canManageRoom(room, viewerID) {
+			return errUnauthorized
+		}
+	} else if room.GameType != GameTypeTeams && room.RoundPhase != RoundPhaseViewScore && room.RoundPhase != RoundPhaseSetupGame {
 		return errUnauthorized
 	}
 	if room.GameType == GameTypeTeams {
@@ -437,20 +574,13 @@ func startRound(room *RoomState, viewerID string) error {
 			}
 			room.ActingTeam = player.Team
 		} else if room.RoundPhase == RoundPhaseViewScore {
-			nextTeam := teamReverse(room.ActingTeam)
-			score := getScore(room.SpectrumTarget, room.Guess)
-			if score == 4 {
-				if room.ActingTeam == TeamLeft && room.LeftScore < room.RightScore {
-					nextTeam = TeamLeft
-				}
-				if room.ActingTeam == TeamRight && room.RightScore < room.LeftScore {
-					nextTeam = TeamRight
-				}
-			}
+			nextTeam := nextTeamAfterScore(room)
 			if player.Team != nextTeam {
 				return errUnauthorized
 			}
 			room.ActingTeam = nextTeam
+		} else if room.RoundPhase != RoundPhasePickTeams {
+			return errUnauthorized
 		}
 	}
 	if room.GameType != GameTypeTeams && room.RoundPhase == RoundPhaseViewScore && player.IsObserver {
@@ -476,10 +606,11 @@ func startRound(room *RoomState, viewerID string) error {
 	room.Clues = []Clue{}
 	room.Guess = 10
 	room.CounterGuess = "left"
-	room.PsychicIDs = choosePsychics(room)
+	room.PsychicIDs = choosePsychics(room, nil, room.PsychicCount)
 	if len(room.PsychicIDs) == 0 {
 		return fmt.Errorf("no eligible psychics available")
 	}
+	incrementPsychicPickCounts(room, room.PsychicIDs)
 	return nil
 }
 
@@ -543,6 +674,19 @@ func normalizeRoundState(room *RoomState) {
 		creator.IsModerator = true
 		room.Players[room.CreatorID] = creator
 	}
+	if room.PsychicPickCounts == nil {
+		room.PsychicPickCounts = map[string]int{}
+	}
+	for playerID := range room.Players {
+		if _, ok := room.PsychicPickCounts[playerID]; !ok {
+			room.PsychicPickCounts[playerID] = 0
+		}
+	}
+	for playerID := range room.PsychicPickCounts {
+		if _, ok := room.Players[playerID]; !ok {
+			delete(room.PsychicPickCounts, playerID)
+		}
+	}
 	if room.PsychicCount < 1 {
 		room.PsychicCount = 1
 	}
@@ -564,16 +708,9 @@ func normalizeRoundState(room *RoomState) {
 	if room.RoundPhase == RoundPhaseGiveClue {
 		needed := room.PsychicCount - len(room.PsychicIDs)
 		if needed > 0 {
-			for _, candidate := range choosePsychics(room) {
-				if containsString(room.PsychicIDs, candidate) {
-					continue
-				}
-				room.PsychicIDs = append(room.PsychicIDs, candidate)
-				needed--
-				if needed == 0 {
-					break
-				}
-			}
+			additions := choosePsychics(room, room.PsychicIDs, needed)
+			room.PsychicIDs = append(room.PsychicIDs, additions...)
+			incrementPsychicPickCounts(room, additions)
 		}
 		if len(room.Clues) >= effectiveClueQuota(room) && effectiveClueQuota(room) > 0 {
 			room.RoundPhase = RoundPhaseMakeGuess
@@ -590,10 +727,12 @@ func containsString(values []string, target string) bool {
 	return false
 }
 
-func sanitizeRoomForViewer(room RoomState, viewerID string) RoomView {
+func sanitizeRoomForViewer(room RoomState, roomID string, viewerID string) RoomView {
 	normalizeRoomStateShape(&room)
-	view := RoomView{RoomState: room}
+	view := RoomView{RoomState: room, RoomID: roomID}
 	view.MigrationTokens = nil
+	view.PsychicPickCounts = nil
+	view.RedirectRoomID = ""
 	players := map[string]PlayerState{}
 	for playerID, player := range room.Players {
 		player.SessionSecret = ""
@@ -655,6 +794,9 @@ func canStartRound(room *RoomState, viewerID string) bool {
 	if room.RoundPhase == RoundPhaseSetupGame {
 		return canManageRoom(room, viewerID)
 	}
+	if room.RoundPhase == RoundPhaseReady {
+		return canManageRoom(room, viewerID)
+	}
 	if room.GameType == GameTypeTeams {
 		if room.RoundPhase == RoundPhasePickTeams {
 			return canManageRoom(room, viewerID) && player.Team != TeamUnset
@@ -662,17 +804,17 @@ func canStartRound(room *RoomState, viewerID string) bool {
 		if room.RoundPhase != RoundPhaseViewScore {
 			return false
 		}
-		nextTeam := teamReverse(room.ActingTeam)
-		score := getScore(room.SpectrumTarget, room.Guess)
-		if score == 4 {
-			if room.ActingTeam == TeamLeft && room.LeftScore < room.RightScore {
-				nextTeam = TeamLeft
-			}
-			if room.ActingTeam == TeamRight && room.RightScore < room.LeftScore {
-				nextTeam = TeamRight
-			}
+		if isGameOver(room) {
+			return false
 		}
+		nextTeam := nextTeamAfterScore(room)
 		return player.Team == nextTeam
 	}
-	return room.RoundPhase == RoundPhaseViewScore || room.RoundPhase == RoundPhaseSetupGame
+	if room.RoundPhase != RoundPhaseViewScore {
+		return false
+	}
+	if isGameOver(room) {
+		return false
+	}
+	return true
 }

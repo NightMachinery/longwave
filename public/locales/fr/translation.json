@@ -15,7 +15,13 @@
     "copy_room_link_success": "Room link copied.",
     "migrate_device": "Migrate device",
     "migrate_device_success": "Migration link copied.",
-    "copy_link_failed": "Could not copy the link. Copy it manually from the address bar."
+    "copy_link_failed": "Could not copy the link. Copy it manually from the address bar.",
+    "play_again": "Play Again",
+    "reset_room_id": "Reset Room ID",
+    "reroll_prompt": "Reroll prompt",
+    "save_name": "Save name",
+    "psychics": "Psychics",
+    "clue_quota": "Clue quota"
   },
   "spectrum": {
     "guessing": "En cours de déduction...",
@@ -48,7 +54,8 @@
   },
   "inputname": {
     "your_name": "Taper votre nom",
-    "submit_name": "Save name"
+    "submit_name": "Save name",
+    "cancel": "Cancel"
   },
   "jointeam": {
     "join_team": "Rejoindre une Équipe",
@@ -98,7 +105,8 @@
     "catching_up_info": "Après qu'une équipe a marqué quatre points d'un coup, elle obtient un tour bonus si elle est toujours derrière l'autre équipe",
     "draw_next_card": "Dessiner la carte de plage de valeur suivante",
     "score": "Score",
-    "got": "obtient"
+    "got": "obtient",
+    "play_again": "Play again"
   },
   "playercard": {
     "creator": "Creator",
@@ -117,5 +125,15 @@
     "observe": "Observe",
     "demote_mod": "Demote mod",
     "promote_mod": "Promote mod"
+  },
+  "readylobby": {
+    "mode_ready": "Mode ready",
+    "waiting_for_mod": "Waiting for a moderator to restart the game.",
+    "start_game": "Start game"
+  },
+  "roomerror": {
+    "stale_link": "This room link has expired. Ask a moderator for the latest link.",
+    "join_failed": "Could not connect to this room right now.",
+    "return_home": "Return home"
   }
 }

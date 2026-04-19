@@ -1,68 +1,151 @@
-import { useParams } from "react-router-dom";
-import { CenteredRow } from "./LayoutElements";
+import { CenteredColumn, CenteredRow } from "./LayoutElements";
 import {
+  faArrowsRotate,
   faCogs,
   faLink,
+  faRotateLeft,
+  faShuffle,
   faUserEdit,
   faUserPlus,
   faWandMagicSparkles,
 } from "@fortawesome/free-solid-svg-icons";
-import { faUndo } from "@fortawesome/free-solid-svg-icons";
 import Tippy from "@tippyjs/react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useContext, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { GameModelContext } from "../../state/GameModelContext";
 import { copyTextToClipboard } from "../../utils/copyTextToClipboard";
-import {
-  buildCanonicalRoomUrl,
-  buildMigratedRoomUrl,
-} from "../../utils/roomIdentity";
+import { buildCanonicalRoomUrl, buildMigratedRoomUrl } from "../../utils/roomIdentity";
 import { requestMigrationLink } from "../../network/roomApi";
+import { RoundPhase } from "../../state/GameState";
 import { useTranslation } from "react-i18next";
 
-export function RoomIdHeader() {
-  const { t } = useTranslation();
-  const { roomId }: { [k: string]: any } = useParams();
+type Notice = {
+  kind: "success" | "error";
+  message: string;
+} | null;
+
+function useTransientNotice() {
+  const [notice, setNotice] = useState<Notice>(null);
+
+  useEffect(() => {
+    if (notice === null) {
+      return;
+    }
+    const timeoutId = window.setTimeout(() => setNotice(null), 2600);
+    return () => window.clearTimeout(timeoutId);
+  }, [notice]);
+
+  return [notice, setNotice] as const;
+}
+
+function HeaderNotice(props: { notice: Notice }) {
+  if (props.notice === null) {
+    return null;
+  }
 
   return (
-    <CenteredRow
+    <div
+      role="status"
       style={{
-        justifyContent: "flex-end",
-        alignItems: "center",
-        color: "gray",
+        alignSelf: "flex-end",
+        marginTop: 8,
+        padding: "8px 12px",
+        borderRadius: 12,
+        backgroundColor: props.notice.kind === "success" ? "#ecfdf5" : "#fef2f2",
+        color: props.notice.kind === "success" ? "#065f46" : "#991b1b",
+        border: `1px solid ${props.notice.kind === "success" ? "#a7f3d0" : "#fecaca"}`,
+        boxShadow: "0 8px 20px rgba(15, 23, 42, 0.08)",
+        fontSize: 14,
+        fontWeight: 600,
       }}
     >
-      <div style={{ margin: 4, padding: 4 }}>
-        {t("roomidheader.roomid")} {roomId}
-      </div>
-      <Tippy content={<RoomMenu roomId={roomId} />} interactive placement="bottom-end">
-        <div tabIndex={0} style={{ padding: 8 }}>
-          <FontAwesomeIcon icon={faCogs} />
-        </div>
-      </Tippy>
-    </CenteredRow>
+      {props.notice.message}
+    </div>
   );
 }
 
-export function RoomMenu(props: { roomId: string }) {
+export function RoomIdHeader() {
   const { t } = useTranslation();
-  const { gameState, setPlayerName, submitAction } = useContext(GameModelContext);
-  const [copyStatus, setCopyStatus] = useState<
-    "idle" | "room" | "migrate" | "error"
-  >("idle");
-  const canonicalRoomUrl = buildCanonicalRoomUrl(
-    window.location.origin,
-    props.roomId
+  const { gameState } = useContext(GameModelContext);
+  const [notice, setNotice] = useTransientNotice();
+
+  const canonicalRoomUrl = useMemo(
+    () => buildCanonicalRoomUrl(window.location.origin, gameState.roomId),
+    [gameState.roomId]
   );
+
+  const showCopyNotice = useCallback(
+    async (text: string, successMessage: string) => {
+      const copied = await copyTextToClipboard(text);
+      setNotice({
+        kind: copied ? "success" : "error",
+        message: copied ? successMessage : t("roomidheader.copy_link_failed"),
+      });
+    },
+    [setNotice, t]
+  );
+
+  return (
+    <CenteredColumn style={{ alignItems: "stretch" }}>
+      <CenteredRow
+        style={{
+          justifyContent: "flex-end",
+          alignItems: "center",
+          color: "gray",
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => {
+            void showCopyNotice(canonicalRoomUrl, t("roomidheader.copy_room_link_success"));
+          }}
+          style={{
+            margin: 4,
+            padding: 4,
+            background: "transparent",
+            border: "none",
+            color: "inherit",
+            cursor: "pointer",
+            borderRadius: 8,
+            fontWeight: 600,
+          }}
+        >
+          {t("roomidheader.roomid")} {gameState.roomId}
+        </button>
+        <Tippy
+          content={
+            <RoomMenu
+              roomId={gameState.roomId}
+              canonicalRoomUrl={canonicalRoomUrl}
+              showCopyNotice={showCopyNotice}
+              showNotice={setNotice}
+            />
+          }
+          interactive
+          placement="bottom-end"
+        >
+          <div tabIndex={0} style={{ padding: 8 }}>
+            <FontAwesomeIcon icon={faCogs} />
+          </div>
+        </Tippy>
+      </CenteredRow>
+      <HeaderNotice notice={notice} />
+    </CenteredColumn>
+  );
+}
+
+export function RoomMenu(props: {
+  roomId: string;
+  canonicalRoomUrl: string;
+  showCopyNotice: (text: string, successMessage: string) => Promise<void>;
+  showNotice: (notice: Notice) => void;
+}) {
+  const { t } = useTranslation();
+  const { gameState, openNameEditor, submitAction } = useContext(GameModelContext);
 
   const menuItemProps = {
     style: { margin: 8, cursor: "pointer" },
     tabIndex: 0,
-  };
-
-  const copyLink = async (text: string, successStatus: "room" | "migrate") => {
-    const copied = await copyTextToClipboard(text);
-    setCopyStatus(copied ? successStatus : "error");
   };
 
   const updateIntegerSetting = (field: "psychicCount" | "clueQuota", delta: number) => {
@@ -75,12 +158,20 @@ export function RoomMenu(props: { roomId: string }) {
     }
   };
 
+  const canRerollPrompt =
+    gameState.viewer.canManageRoom &&
+    gameState.roundPhase === RoundPhase.GiveClue &&
+    gameState.clues.length === 0;
+
   return (
     <div>
       <div
         {...menuItemProps}
         onClick={() => {
-          void copyLink(canonicalRoomUrl, "room");
+          void props.showCopyNotice(
+            props.canonicalRoomUrl,
+            t("roomidheader.copy_room_link_success")
+          );
         }}
       >
         <FontAwesomeIcon icon={faLink} /> {t("roomidheader.copy_room_link")}
@@ -93,9 +184,14 @@ export function RoomMenu(props: { roomId: string }) {
               const url = serverURL.startsWith("http")
                 ? serverURL
                 : buildMigratedRoomUrl(window.location.origin, props.roomId, serverURL);
-              return copyLink(url, "migrate");
+              return props.showCopyNotice(url, t("roomidheader.migrate_device_success"));
             })
-            .catch(() => setCopyStatus("error"));
+            .catch(() =>
+              props.showNotice({
+                kind: "error",
+                message: t("roomidheader.copy_link_failed"),
+              })
+            );
         }}
       >
         <FontAwesomeIcon icon={faUserPlus} /> {t("roomidheader.migrate_device")}
@@ -103,7 +199,8 @@ export function RoomMenu(props: { roomId: string }) {
       {gameState.viewer.canManageRoom && (
         <>
           <div style={{ margin: 8 }}>
-            <FontAwesomeIcon icon={faWandMagicSparkles} /> Psychics: {gameState.psychicCount}
+            <FontAwesomeIcon icon={faWandMagicSparkles} /> {t("roomidheader.psychics")}:{" "}
+            {gameState.psychicCount}
             <button type="button" onClick={() => updateIntegerSetting("psychicCount", -1)}>
               -
             </button>
@@ -112,7 +209,7 @@ export function RoomMenu(props: { roomId: string }) {
             </button>
           </div>
           <div style={{ margin: 8 }}>
-            Clue quota: {gameState.clueQuota}
+            {t("roomidheader.clue_quota", "Clue quota")}: {gameState.clueQuota}
             <button type="button" onClick={() => updateIntegerSetting("clueQuota", -1)}>
               -
             </button>
@@ -120,21 +217,25 @@ export function RoomMenu(props: { roomId: string }) {
               +
             </button>
           </div>
+          <div {...menuItemProps} onClick={() => submitAction({ type: "play_again" })}>
+            <FontAwesomeIcon icon={faArrowsRotate} /> {t("roomidheader.play_again")}
+          </div>
+          {canRerollPrompt && (
+            <div {...menuItemProps} onClick={() => submitAction({ type: "reroll_round" })}>
+              <FontAwesomeIcon icon={faShuffle} /> {t("roomidheader.reroll_prompt")}
+            </div>
+          )}
           <div {...menuItemProps} onClick={() => submitAction({ type: "reset_room" })}>
-            <FontAwesomeIcon icon={faUndo} /> {t("roomidheader.reset_room")}
+            <FontAwesomeIcon icon={faRotateLeft} /> {t("roomidheader.reset_room")}
+          </div>
+          <div {...menuItemProps} onClick={() => submitAction({ type: "reset_room_id" })}>
+            <FontAwesomeIcon icon={faLink} /> {t("roomidheader.reset_room_id")}
           </div>
         </>
       )}
-      <div {...menuItemProps} onClick={() => setPlayerName("")}>
+      <div {...menuItemProps} onClick={openNameEditor}>
         <FontAwesomeIcon icon={faUserEdit} /> {t("roomidheader.change_name")}
       </div>
-      {copyStatus === "room" && <div style={{ margin: 8 }}>{t("roomidheader.copy_room_link_success")}</div>}
-      {copyStatus === "migrate" && (
-        <div style={{ margin: 8 }}>{t("roomidheader.migrate_device_success")}</div>
-      )}
-      {copyStatus === "error" && (
-        <div style={{ margin: 8 }}>{t("roomidheader.copy_link_failed")}</div>
-      )}
     </div>
   );
 }

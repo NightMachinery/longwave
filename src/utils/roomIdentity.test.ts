@@ -1,6 +1,7 @@
 import {
   buildCanonicalRoomUrl,
   buildMigratedRoomUrl,
+  getGlobalPlayerNameStorageKey,
   getMigrationKey,
   getPlayerNameStorageKey,
   readStoredPlayerName,
@@ -18,13 +19,21 @@ describe("roomIdentity", () => {
     };
   }
 
-  it("stores player names by room id", () => {
+  it("stores player names globally", () => {
     const storage = createStorage();
-    const storageKey = getPlayerNameStorageKey("ROOM");
+    const storageKey = getGlobalPlayerNameStorageKey();
 
-    writeStoredPlayerName(storage, storageKey, "Alice");
+    writeStoredPlayerName(storage, "Alice");
 
-    expect(readStoredPlayerName(storage, storageKey)).toBe("Alice");
+    expect(storage.getItem(storageKey)).toBe(JSON.stringify("Alice"));
+    expect(readStoredPlayerName(storage, "ROOM")).toBe("Alice");
+  });
+
+  it("falls back to a legacy room-specific name when no global name exists", () => {
+    const storage = createStorage();
+    storage.setItem(getPlayerNameStorageKey("ROOM"), JSON.stringify("Legacy Alice"));
+
+    expect(readStoredPlayerName(storage, "ROOM")).toBe("Legacy Alice");
   });
 
   it("builds canonical room urls without query parameters", () => {

@@ -9,12 +9,17 @@ import { SetupGame } from "./SetupGame";
 import { CounterGuess } from "./CounterGuess";
 import { GameModelContext } from "../../state/GameModelContext";
 import { PreviousTurnResult } from "./PreviousTurnResult";
+import { ReadyLobby } from "./ReadyLobby";
 
 export function ActiveGame() {
   const { gameState, localPlayer } = useContext(GameModelContext);
 
   if (gameState.roundPhase === RoundPhase.SetupGame) {
     return <SetupGame />;
+  }
+
+  if (gameState.roundPhase === RoundPhase.Ready) {
+    return <ReadyLobby />;
   }
 
   if (

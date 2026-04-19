@@ -5,7 +5,14 @@ import { LongwaveAppTitle } from "../common/Title";
 import { useTranslation } from "react-i18next";
 import { Button } from "../common/Button";
 
-export function InputName(props: { setName: (name: string) => void }) {
+export function InputName(props: {
+  setName: (name: string) => void;
+  initialName?: string;
+  title?: string;
+  submitText?: string;
+  onCancel?: () => void;
+  cancelText?: string;
+}) {
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -20,7 +27,7 @@ export function InputName(props: { setName: (name: string) => void }) {
   return (
     <CenteredColumn>
       <LongwaveAppTitle />
-      <div>{t("inputname.your_name")}:</div>
+      <div>{props.title ?? t("inputname.your_name")}:</div>
       <form
         onSubmit={(event) => {
           event.preventDefault();
@@ -32,6 +39,7 @@ export function InputName(props: { setName: (name: string) => void }) {
             type="text"
             style={{ margin: 16 }}
             ref={inputRef}
+            defaultValue={props.initialName ?? ""}
             onKeyDown={(event) => {
               if (event.key !== "Enter") {
                 return;
@@ -41,7 +49,16 @@ export function InputName(props: { setName: (name: string) => void }) {
               submitName();
             }}
           />
-          <Button text={t("inputname.submit_name")} onClick={submitName} />
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
+            <Button text={props.submitText ?? t("inputname.submit_name")} onClick={submitName} />
+            {props.onCancel && (
+              <Button
+                text={props.cancelText ?? t("inputname.cancel", "Cancel")}
+                onClick={props.onCancel}
+                variant="ghost"
+              />
+            )}
+          </div>
         </CenteredColumn>
       </form>
     </CenteredColumn>

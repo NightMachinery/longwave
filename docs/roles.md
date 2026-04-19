@@ -19,7 +19,7 @@ Longwave now supports server-enforced room roles and filtered hidden information
   - They keep their stored team, moderator, and representative flags while observing.
   - Moderators retain moderator powers even while observing.
 - **Psychic**
-  - Psychics are chosen randomly each round from the eligible active player pool.
+  - Psychics are chosen from the eligible active player pool, preferring players who have been psychic the fewest times in the current game and randomizing only within ties.
   - Team mode picks psychics from the acting team; Cooperative and Free Play pick from the whole active room.
 
 ## Psychic count and clue quota
@@ -51,3 +51,5 @@ Room access now uses a room-scoped server session cookie instead of the older `r
 - **Copy room link** shares the clean room URL.
 - **Migrate device** asks the server for a one-time migration link.
 - Opening that migration link on another device transfers the same in-room identity there.
+- **Play Again** resets the current game while preserving the room, creator, player list, and room settings.
+- **Reset Room ID** rotates the join code so the old public link stops accepting new joins.

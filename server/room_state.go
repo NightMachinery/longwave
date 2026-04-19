@@ -17,6 +17,7 @@ type Team int
 
 const (
 	RoundPhaseSetupGame RoundPhase = iota
+	RoundPhaseReady
 	RoundPhasePickTeams
 	RoundPhaseGiveClue
 	RoundPhaseMakeGuess
@@ -61,28 +62,30 @@ type TurnSummaryModel struct {
 }
 
 type RoomState struct {
-	GameType        GameType                    `json:"gameType"`
-	RoundPhase      RoundPhase                  `json:"roundPhase"`
-	TurnsTaken      int                         `json:"turnsTaken"`
-	DeckSeed        string                      `json:"deckSeed"`
-	DeckIndex       int                         `json:"deckIndex"`
-	SpectrumTarget  int                         `json:"spectrumTarget"`
-	Clues           []Clue                      `json:"clues"`
-	Guess           int                         `json:"guess"`
-	CounterGuess    string                      `json:"counterGuess"`
-	Players         map[string]PlayerState      `json:"players"`
-	PsychicIDs      []string                    `json:"psychicIds"`
-	ActingTeam      Team                        `json:"actingTeam"`
-	LeftScore       int                         `json:"leftScore"`
-	RightScore      int                         `json:"rightScore"`
-	CoopScore       int                         `json:"coopScore"`
-	CoopBonusTurns  int                         `json:"coopBonusTurns"`
-	PreviousTurn    *TurnSummaryModel           `json:"previousTurn"`
-	DeckLanguage    string                      `json:"deckLanguage"`
-	CreatorID       string                      `json:"creatorId"`
-	PsychicCount    int                         `json:"psychicCount"`
-	ClueQuota       int                         `json:"clueQuota"`
-	MigrationTokens map[string]string           `json:"migrationTokens,omitempty"`
+	GameType          GameType               `json:"gameType"`
+	RoundPhase        RoundPhase             `json:"roundPhase"`
+	TurnsTaken        int                    `json:"turnsTaken"`
+	DeckSeed          string                 `json:"deckSeed"`
+	DeckIndex         int                    `json:"deckIndex"`
+	SpectrumTarget    int                    `json:"spectrumTarget"`
+	Clues             []Clue                 `json:"clues"`
+	Guess             int                    `json:"guess"`
+	CounterGuess      string                 `json:"counterGuess"`
+	Players           map[string]PlayerState `json:"players"`
+	PsychicIDs        []string               `json:"psychicIds"`
+	ActingTeam        Team                   `json:"actingTeam"`
+	LeftScore         int                    `json:"leftScore"`
+	RightScore        int                    `json:"rightScore"`
+	CoopScore         int                    `json:"coopScore"`
+	CoopBonusTurns    int                    `json:"coopBonusTurns"`
+	PreviousTurn      *TurnSummaryModel      `json:"previousTurn"`
+	DeckLanguage      string                 `json:"deckLanguage"`
+	CreatorID         string                 `json:"creatorId"`
+	PsychicCount      int                    `json:"psychicCount"`
+	ClueQuota         int                    `json:"clueQuota"`
+	PsychicPickCounts map[string]int         `json:"psychicPickCounts,omitempty"`
+	MigrationTokens   map[string]string      `json:"migrationTokens,omitempty"`
+	RedirectRoomID    string                 `json:"redirectRoomId,omitempty"`
 }
 
 type ViewerState struct {
@@ -102,6 +105,7 @@ type ViewerState struct {
 
 type RoomView struct {
 	RoomState
+	RoomID string      `json:"roomId"`
 	Viewer ViewerState `json:"viewer"`
 }
 
@@ -110,28 +114,29 @@ func InitialRoomState(deckLanguage string) RoomState {
 		deckLanguage = "en"
 	}
 	return RoomState{
-		GameType:        GameTypeTeams,
-		RoundPhase:      RoundPhaseSetupGame,
-		TurnsTaken:      -1,
-		DeckSeed:        randomDeckSeed(),
-		DeckIndex:       0,
-		SpectrumTarget:  randomSpectrumTarget(),
-		Clues:           []Clue{},
-		Guess:           10,
-		CounterGuess:    "left",
-		Players:         map[string]PlayerState{},
-		PsychicIDs:      []string{},
-		ActingTeam:      TeamUnset,
-		LeftScore:       0,
-		RightScore:      0,
-		CoopScore:       0,
-		CoopBonusTurns:  0,
-		PreviousTurn:    nil,
-		DeckLanguage:    deckLanguage,
-		CreatorID:       "",
-		PsychicCount:    1,
-		ClueQuota:       1,
-		MigrationTokens: map[string]string{},
+		GameType:          GameTypeTeams,
+		RoundPhase:        RoundPhaseSetupGame,
+		TurnsTaken:        -1,
+		DeckSeed:          randomDeckSeed(),
+		DeckIndex:         0,
+		SpectrumTarget:    randomSpectrumTarget(),
+		Clues:             []Clue{},
+		Guess:             10,
+		CounterGuess:      "left",
+		Players:           map[string]PlayerState{},
+		PsychicIDs:        []string{},
+		ActingTeam:        TeamUnset,
+		LeftScore:         0,
+		RightScore:        0,
+		CoopScore:         0,
+		CoopBonusTurns:    0,
+		PreviousTurn:      nil,
+		DeckLanguage:      deckLanguage,
+		CreatorID:         "",
+		PsychicCount:      1,
+		ClueQuota:         1,
+		PsychicPickCounts: map[string]int{},
+		MigrationTokens:   map[string]string{},
 	}
 }
 
@@ -147,6 +152,10 @@ func randomDeckSeed() string {
 		builder.WriteByte(chars[rng.Intn(len(chars))])
 	}
 	return builder.String()
+}
+
+func randomRoomID() string {
+	return randomDeckSeed()
 }
 
 func seededRand() *mathrand.Rand {
@@ -171,7 +180,6 @@ func sortedEligiblePlayers(playerIDs []string) []string {
 	return result
 }
 
-
 func normalizeRoomStateShape(room *RoomState) {
 	if room.Players == nil {
 		room.Players = map[string]PlayerState{}
@@ -184,6 +192,9 @@ func normalizeRoomStateShape(room *RoomState) {
 	}
 	if room.MigrationTokens == nil {
 		room.MigrationTokens = map[string]string{}
+	}
+	if room.PsychicPickCounts == nil {
+		room.PsychicPickCounts = map[string]int{}
 	}
 	if room.PreviousTurn != nil && room.PreviousTurn.Clues == nil {
 		room.PreviousTurn.Clues = []Clue{}

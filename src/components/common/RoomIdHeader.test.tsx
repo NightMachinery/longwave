@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { I18nextProvider } from "react-i18next";
 import i18n from "../gameplay/i18nForTests";
 import { GameModelContext } from "../../state/GameModelContext";
-import { InitialGameState, Team } from "../../state/GameState";
+import { InitialGameState, RoundPhase, Team } from "../../state/GameState";
 import { RoomMenu } from "./RoomIdHeader";
 import { copyTextToClipboard } from "../../utils/copyTextToClipboard";
 import { requestMigrationLink } from "../../network/roomApi";
@@ -67,12 +67,19 @@ describe("RoomMenu", () => {
           spectrumCard: ["left", "right"],
           previousSpectrumCard: null,
           submitAction: jest.fn(),
-          setPlayerName: jest.fn(),
+          openNameEditor: jest.fn(),
         }}
       >
         <Suspense fallback={<div>Loading...</div>}>
           <I18nextProvider i18n={i18n}>
-            <RoomMenu roomId="ROOM" />
+            <RoomMenu
+              roomId="ROOM"
+              canonicalRoomUrl="http://localhost/ROOM"
+              showCopyNotice={async (text) => {
+                await copyTextToClipboard(text);
+              }}
+              showNotice={jest.fn()}
+            />
           </I18nextProvider>
         </Suspense>
       </GameModelContext.Provider>
@@ -102,5 +109,58 @@ describe("RoomMenu", () => {
         "http://localhost/ROOM?migrate=abc123"
       );
     });
+  });
+
+  it("shows reroll prompt only before clues are submitted", () => {
+    const component = render(
+      <GameModelContext.Provider
+        value={{
+          gameState: {
+            ...InitialGameState("en"),
+            roundPhase: RoundPhase.GiveClue,
+            viewer: {
+              ...InitialGameState("en").viewer,
+              playerId: "player-id",
+              canManageRoom: true,
+            },
+            players: {
+              "player-id": {
+                name: "Player",
+                team: Team.Unset,
+                isModerator: true,
+                isRepresentative: false,
+                isObserver: false,
+              },
+            },
+          },
+          localPlayer: {
+            id: "player-id",
+            name: "Player",
+            team: Team.Unset,
+            isModerator: true,
+            isRepresentative: false,
+            isObserver: false,
+          },
+          psychics: [],
+          spectrumCard: ["left", "right"],
+          previousSpectrumCard: null,
+          submitAction: jest.fn(),
+          openNameEditor: jest.fn(),
+        }}
+      >
+        <Suspense fallback={<div>Loading...</div>}>
+          <I18nextProvider i18n={i18n}>
+            <RoomMenu
+              roomId="ROOM"
+              canonicalRoomUrl="http://localhost/ROOM"
+              showCopyNotice={async () => {}}
+              showNotice={jest.fn()}
+            />
+          </I18nextProvider>
+        </Suspense>
+      </GameModelContext.Provider>
+    );
+
+    expect(component.getByText("Reroll prompt")).toBeTruthy();
   });
 });

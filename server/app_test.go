@@ -206,6 +206,214 @@ func TestCreatorCanSelfManageRepresentativeAndObserverButNotDemoteModerator(t *t
 	}
 }
 
+func TestPlayAgainPreservesModeSettingsAndPlayers(t *testing.T) {
+	t.Parallel()
+
+	testServer := newTestHTTPServer(t)
+	defer testServer.Close()
+
+	aliceJoin := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/join", map[string]any{
+		"playerName": "Alice",
+	})
+	if aliceJoin.StatusCode != http.StatusOK {
+		t.Fatalf("expected alice join to return 200, got %d", aliceJoin.StatusCode)
+	}
+	aliceCookie := aliceJoin.Cookies()[0]
+	aliceBody := decodeBody[RoomView](t, aliceJoin.Body)
+
+	bobJoin := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/join", map[string]any{
+		"playerName": "Bob",
+	})
+	if bobJoin.StatusCode != http.StatusOK {
+		t.Fatalf("expected bob join to return 200, got %d", bobJoin.StatusCode)
+	}
+	_ = decodeBody[RoomView](t, bobJoin.Body)
+
+	setPsychics := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/actions", map[string]any{
+		"type":         "set_psychic_count",
+		"psychicCount": 2,
+	}, aliceCookie)
+	if setPsychics.StatusCode != http.StatusOK {
+		t.Fatalf("expected set psychics to return 200, got %d", setPsychics.StatusCode)
+	}
+
+	setClueQuota := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/actions", map[string]any{
+		"type":      "set_clue_quota",
+		"clueQuota": 2,
+	}, aliceCookie)
+	if setClueQuota.StatusCode != http.StatusOK {
+		t.Fatalf("expected set clue quota to return 200, got %d", setClueQuota.StatusCode)
+	}
+
+	setGameType := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/actions", map[string]any{
+		"type":     "set_game_type",
+		"gameType": int(GameTypeCooperative),
+	}, aliceCookie)
+	if setGameType.StatusCode != http.StatusOK {
+		t.Fatalf("expected coop start to return 200, got %d", setGameType.StatusCode)
+	}
+
+	playAgain := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/actions", map[string]any{
+		"type": "play_again",
+	}, aliceCookie)
+	if playAgain.StatusCode != http.StatusOK {
+		t.Fatalf("expected play again to return 200, got %d", playAgain.StatusCode)
+	}
+	playAgainBody := decodeBody[RoomView](t, playAgain.Body)
+	if playAgainBody.RoomID != "ROOM" {
+		t.Fatalf("expected play again to preserve room id, got %q", playAgainBody.RoomID)
+	}
+	if playAgainBody.RoundPhase != RoundPhaseReady {
+		t.Fatalf("expected cooperative play again to land in ready lobby, got %v", playAgainBody.RoundPhase)
+	}
+	if playAgainBody.GameType != GameTypeCooperative {
+		t.Fatalf("expected cooperative mode to persist, got %v", playAgainBody.GameType)
+	}
+	if playAgainBody.CreatorID != aliceBody.Viewer.PlayerID {
+		t.Fatalf("expected creator id to persist, got %q", playAgainBody.CreatorID)
+	}
+	if playAgainBody.PsychicCount != 2 || playAgainBody.ClueQuota != 2 {
+		t.Fatalf("expected room settings to persist, got psychicCount=%d clueQuota=%d", playAgainBody.PsychicCount, playAgainBody.ClueQuota)
+	}
+	if len(playAgainBody.Players) != 2 {
+		t.Fatalf("expected both players to remain in room, got %d", len(playAgainBody.Players))
+	}
+	if playAgainBody.TurnsTaken != -1 || len(playAgainBody.PsychicIDs) != 0 || len(playAgainBody.Clues) != 0 {
+		t.Fatalf("expected round progress to reset, got turns=%d psychics=%d clues=%d", playAgainBody.TurnsTaken, len(playAgainBody.PsychicIDs), len(playAgainBody.Clues))
+	}
+}
+
+func TestResetRoomIDInvalidatesOldJoinLinkButForwardsAuthenticatedPlayers(t *testing.T) {
+	t.Parallel()
+
+	testServer := newTestHTTPServer(t)
+	defer testServer.Close()
+
+	aliceJoin := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/join", map[string]any{
+		"playerName": "Alice",
+	})
+	if aliceJoin.StatusCode != http.StatusOK {
+		t.Fatalf("expected alice join to return 200, got %d", aliceJoin.StatusCode)
+	}
+	aliceCookie := aliceJoin.Cookies()[0]
+	_ = decodeBody[RoomView](t, aliceJoin.Body)
+
+	resetID := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/actions", map[string]any{
+		"type": "reset_room_id",
+	}, aliceCookie)
+	if resetID.StatusCode != http.StatusOK {
+		t.Fatalf("expected reset room id to return 200, got %d", resetID.StatusCode)
+	}
+	resetBody := decodeBody[RoomView](t, resetID.Body)
+	if resetBody.RoomID == "" || resetBody.RoomID == "ROOM" {
+		t.Fatalf("expected a new canonical room id, got %q", resetBody.RoomID)
+	}
+
+	bobJoinOld := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/join", map[string]any{
+		"playerName": "Bob",
+	})
+	if bobJoinOld.StatusCode != http.StatusGone {
+		t.Fatalf("expected old room id join to fail with 410, got %d", bobJoinOld.StatusCode)
+	}
+
+	aliceOldGet := doRequestWithCookie(t, testServer, http.MethodGet, "/api/rooms/ROOM", nil, aliceCookie)
+	if aliceOldGet.StatusCode != http.StatusOK {
+		t.Fatalf("expected authenticated old room get to forward with 200, got %d", aliceOldGet.StatusCode)
+	}
+	aliceForwarded := decodeBody[RoomView](t, aliceOldGet.Body)
+	if aliceForwarded.RoomID != resetBody.RoomID {
+		t.Fatalf("expected authenticated old room get to resolve to %q, got %q", resetBody.RoomID, aliceForwarded.RoomID)
+	}
+
+	aliceRenameOldPath := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/actions", map[string]any{
+		"type": "set_name",
+		"name": "Alice Again",
+	}, aliceCookie)
+	if aliceRenameOldPath.StatusCode != http.StatusOK {
+		t.Fatalf("expected authenticated action on old path to forward with 200, got %d", aliceRenameOldPath.StatusCode)
+	}
+	renameBody := decodeBody[RoomView](t, aliceRenameOldPath.Body)
+	if renameBody.RoomID != resetBody.RoomID {
+		t.Fatalf("expected forwarded action response to use new room id, got %q", renameBody.RoomID)
+	}
+}
+
+func TestRerollRoundKeepsPsychicsAndOnlyWorksBeforeFirstClue(t *testing.T) {
+	t.Parallel()
+
+	testServer := newTestHTTPServer(t)
+	defer testServer.Close()
+
+	aliceJoin := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/join", map[string]any{
+		"playerName": "Alice",
+	})
+	if aliceJoin.StatusCode != http.StatusOK {
+		t.Fatalf("expected alice join to return 200, got %d", aliceJoin.StatusCode)
+	}
+	aliceCookie := aliceJoin.Cookies()[0]
+	aliceBody := decodeBody[RoomView](t, aliceJoin.Body)
+
+	bobJoin := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/join", map[string]any{
+		"playerName": "Bob",
+	})
+	if bobJoin.StatusCode != http.StatusOK {
+		t.Fatalf("expected bob join to return 200, got %d", bobJoin.StatusCode)
+	}
+	bobCookie := bobJoin.Cookies()[0]
+	bobBody := decodeBody[RoomView](t, bobJoin.Body)
+
+	setGameType := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/actions", map[string]any{
+		"type":     "set_game_type",
+		"gameType": int(GameTypeCooperative),
+	}, aliceCookie)
+	if setGameType.StatusCode != http.StatusOK {
+		t.Fatalf("expected coop start to return 200, got %d", setGameType.StatusCode)
+	}
+	startedBody := decodeBody[RoomView](t, setGameType.Body)
+	initialDeckIndex := startedBody.DeckIndex
+	initialPsychics := append([]string(nil), startedBody.PsychicIDs...)
+	if len(initialPsychics) != 1 {
+		t.Fatalf("expected one psychic in default coop mode, got %d", len(initialPsychics))
+	}
+
+	reroll := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/actions", map[string]any{
+		"type": "reroll_round",
+	}, aliceCookie)
+	if reroll.StatusCode != http.StatusOK {
+		t.Fatalf("expected reroll to return 200, got %d", reroll.StatusCode)
+	}
+	rerolledBody := decodeBody[RoomView](t, reroll.Body)
+	if rerolledBody.DeckIndex != initialDeckIndex+1 {
+		t.Fatalf("expected reroll to advance deck index to %d, got %d", initialDeckIndex+1, rerolledBody.DeckIndex)
+	}
+	if strings.Join(rerolledBody.PsychicIDs, ",") != strings.Join(initialPsychics, ",") {
+		t.Fatalf("expected reroll to keep psychics %v, got %v", initialPsychics, rerolledBody.PsychicIDs)
+	}
+
+	psychicCookie := aliceCookie
+	psychicID := initialPsychics[0]
+	if psychicID == bobBody.Viewer.PlayerID {
+		psychicCookie = bobCookie
+	} else if psychicID != aliceBody.Viewer.PlayerID {
+		t.Fatalf("unexpected psychic id %q", psychicID)
+	}
+
+	submitClue := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/actions", map[string]any{
+		"type": "submit_clue",
+		"clue": "coffee",
+	}, psychicCookie)
+	if submitClue.StatusCode != http.StatusOK {
+		t.Fatalf("expected clue submission to return 200, got %d", submitClue.StatusCode)
+	}
+
+	rerollAfterClue := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/actions", map[string]any{
+		"type": "reroll_round",
+	}, aliceCookie)
+	if rerollAfterClue.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected reroll after a clue to fail with 400, got %d", rerollAfterClue.StatusCode)
+	}
+}
+
 func newTestHTTPServer(t *testing.T) *httptest.Server {
 	t.Helper()
 

@@ -11,7 +11,11 @@
   "roomidheader": {
     "roomid": "Room ID:",
     "reset_room": "Reset Room",
+    "play_again": "Play Again",
+    "reset_room_id": "Reset Room ID",
+    "reroll_prompt": "Reroll prompt",
     "change_name": "Change Name",
+    "save_name": "Save name",
     "switch_language_header": "Language setting",
     "language_en": "English",
     "language_de": "Deutsch",
@@ -19,7 +23,9 @@
     "copy_room_link_success": "Room link copied.",
     "migrate_device": "Migrate device",
     "migrate_device_success": "Migration link copied.",
-    "copy_link_failed": "Could not copy the link. Copy it manually from the address bar."
+    "copy_link_failed": "Could not copy the link. Copy it manually from the address bar.",
+    "psychics": "Psychics",
+    "clue_quota": "Clue quota"
   },
   "spectrum": {
     "guessing": "Guessing...",
@@ -52,7 +58,13 @@
   },
   "inputname": {
     "your_name": "Enter your name",
-    "submit_name": "Save name"
+    "submit_name": "Save name",
+    "cancel": "Cancel"
+  },
+  "readylobby": {
+    "mode_ready": "Mode ready",
+    "waiting_for_mod": "Waiting for a moderator to restart the game.",
+    "start_game": "Start game"
   },
   "jointeam": {
     "join_team": "Join Team",
@@ -105,7 +117,13 @@
     "catching_up_info": "After a team scores a four-point round, they get a bonus turn if they are still behind the other team",
     "draw_next_card": "Draw next Spectrum Card",
     "score": "Score",
-    "got": "gets"
+    "got": "gets",
+    "play_again": "Play again"
+  },
+  "roomerror": {
+    "stale_link": "This room link has expired. Ask a moderator for the latest link.",
+    "join_failed": "Could not connect to this room right now.",
+    "return_home": "Return home"
   },
   "playercard": {
     "creator": "Creator",

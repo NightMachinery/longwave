@@ -3,7 +3,8 @@ export interface StorageLike {
   setItem(key: string, value: string): void;
 }
 
-const playerNamePrefix = "playerName:";
+const legacyPlayerNamePrefix = "playerName:";
+const playerNameStorageKey = "playerName";
 const migrationQueryParam = "migrate";
 
 function storageGetJSON<T>(storage: StorageLike, key: string): T | null {
@@ -24,19 +25,26 @@ function storageSetJSON<T>(storage: StorageLike, key: string, value: T) {
 }
 
 export function getPlayerNameStorageKey(roomId: string) {
-  return `${playerNamePrefix}${roomId}`;
+  return `${legacyPlayerNamePrefix}${roomId}`;
 }
 
-export function readStoredPlayerName(storage: StorageLike, storageKey: string) {
-  return storageGetJSON<string>(storage, storageKey) ?? "";
+export function getGlobalPlayerNameStorageKey() {
+  return playerNameStorageKey;
 }
 
-export function writeStoredPlayerName(
-  storage: StorageLike,
-  storageKey: string,
-  playerName: string
-) {
-  storageSetJSON(storage, storageKey, playerName);
+export function readStoredPlayerName(storage: StorageLike, roomId?: string) {
+  const globalName = storageGetJSON<string>(storage, playerNameStorageKey);
+  if (globalName && globalName.trim().length > 0) {
+    return globalName;
+  }
+  if (!roomId) {
+    return "";
+  }
+  return storageGetJSON<string>(storage, getPlayerNameStorageKey(roomId)) ?? "";
+}
+
+export function writeStoredPlayerName(storage: StorageLike, playerName: string) {
+  storageSetJSON(storage, playerNameStorageKey, playerName);
 }
 
 export function buildCanonicalRoomUrl(origin: string, roomId: string) {
