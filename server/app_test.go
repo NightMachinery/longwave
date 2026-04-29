@@ -119,6 +119,82 @@ func TestRoomJoinActionFilteringAndEventStream(t *testing.T) {
 	}
 }
 
+func TestModeratorCanSetWordpackDuringSetupAndMidGame(t *testing.T) {
+	t.Parallel()
+
+	testServer := newTestHTTPServer(t)
+	defer testServer.Close()
+
+	aliceJoin := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/join", map[string]any{
+		"playerName": "Alice",
+	})
+	if aliceJoin.StatusCode != http.StatusOK {
+		t.Fatalf("expected join to return 200, got %d", aliceJoin.StatusCode)
+	}
+	aliceCookie := aliceJoin.Cookies()[0]
+	aliceBody := decodeBody[RoomView](t, aliceJoin.Body)
+	if aliceBody.Wordpack != defaultWordpack {
+		t.Fatalf("expected new room to default to English wordpack, got %q", aliceBody.Wordpack)
+	}
+
+	bobJoin := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/join", map[string]any{
+		"playerName": "Bob",
+	})
+	if bobJoin.StatusCode != http.StatusOK {
+		t.Fatalf("expected bob join to return 200, got %d", bobJoin.StatusCode)
+	}
+	bobCookie := bobJoin.Cookies()[0]
+
+	bobSet := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/actions", map[string]any{
+		"type":     "set_wordpack",
+		"wordpack": "Persian",
+	}, bobCookie)
+	if bobSet.StatusCode != http.StatusForbidden {
+		t.Fatalf("expected non-moderator set_wordpack to return 403, got %d", bobSet.StatusCode)
+	}
+
+	setPersian := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/actions", map[string]any{
+		"type":     "set_wordpack",
+		"wordpack": "Persian",
+	}, aliceCookie)
+	if setPersian.StatusCode != http.StatusOK {
+		t.Fatalf("expected moderator set_wordpack to return 200, got %d", setPersian.StatusCode)
+	}
+	setPersianBody := decodeBody[RoomView](t, setPersian.Body)
+	if setPersianBody.Wordpack != "Persian" {
+		t.Fatalf("expected Persian wordpack, got %q", setPersianBody.Wordpack)
+	}
+
+	invalid := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/actions", map[string]any{
+		"type":     "set_wordpack",
+		"wordpack": "Missing",
+	}, aliceCookie)
+	if invalid.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected invalid wordpack to return 400, got %d", invalid.StatusCode)
+	}
+
+	cooperative := int(GameTypeCooperative)
+	start := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/actions", map[string]any{
+		"type":     "set_game_type",
+		"gameType": cooperative,
+	}, aliceCookie)
+	if start.StatusCode != http.StatusOK {
+		t.Fatalf("expected set_game_type to return 200, got %d", start.StatusCode)
+	}
+
+	lateSet := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/actions", map[string]any{
+		"type":     "set_wordpack",
+		"wordpack": "English",
+	}, aliceCookie)
+	if lateSet.StatusCode != http.StatusOK {
+		t.Fatalf("expected mid-game moderator set_wordpack to return 200, got %d", lateSet.StatusCode)
+	}
+	lateSetBody := decodeBody[RoomView](t, lateSet.Body)
+	if lateSetBody.Wordpack != "English" {
+		t.Fatalf("expected mid-game wordpack change to English, got %q", lateSetBody.Wordpack)
+	}
+}
+
 func TestStaticFilesServeAssetsAndFallbackToIndex(t *testing.T) {
 	t.Parallel()
 

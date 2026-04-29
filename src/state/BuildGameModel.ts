@@ -1,7 +1,7 @@
 import { GameState, Team } from "./GameState";
 import memoize from "lodash/memoize";
-import { TFunction } from "i18next";
 import { RoomAction } from "../network/roomApi";
+import { fallbackWordpackCards, WordpackCard } from "./Wordpack";
 
 const shuffleSeed: {
   shuffle: <T>(arr: T[], seed: string) => T[];
@@ -20,29 +20,22 @@ export interface GameModel {
   gameState: GameState;
   localPlayer: Player;
   psychics: Player[];
-  spectrumCard: [string, string];
-  previousSpectrumCard: [string, string] | null;
+  spectrumCard: WordpackCard;
+  previousSpectrumCard: WordpackCard | null;
   submitAction: (action: RoomAction) => void;
   openNameEditor: () => void;
 }
 
-const getSeededDeck = memoize((seed: string, cards: [string, string][]) =>
+const getSeededDeck = memoize((seed: string, cards: WordpackCard[]) =>
   shuffleSeed.shuffle(cards, seed)
 );
 
 function getCardAtIndex(
   seed: string,
   deckIndex: number,
-  tSpectrumCards: TFunction<"spectrum-cards">
-): [string, string] {
-  type SpectrumCard = [string, string];
-  const basicCards = tSpectrumCards("basic", {
-    returnObjects: true,
-  }) as SpectrumCard[];
-  const advancedCards = tSpectrumCards("advanced", {
-    returnObjects: true,
-  }) as SpectrumCard[];
-  const allCards = [...basicCards, ...advancedCards];
+  cards: WordpackCard[]
+): WordpackCard {
+  const allCards = cards.length > 0 ? cards : fallbackWordpackCards;
   const spectrumDeck = getSeededDeck(seed, allCards);
   return spectrumDeck[deckIndex % spectrumDeck.length];
 }
@@ -50,7 +43,7 @@ function getCardAtIndex(
 export function BuildGameModel(
   gameState: GameState,
   submitAction: (action: RoomAction) => void,
-  tSpectrumCards: TFunction<"spectrum-cards">,
+  wordpackCards: WordpackCard[],
   openNameEditor: () => void
 ): GameModel {
   const players = gameState.players ?? {};
@@ -84,7 +77,7 @@ export function BuildGameModel(
     spectrumCard: getCardAtIndex(
       gameState.deckSeed,
       gameState.deckIndex,
-      tSpectrumCards
+      wordpackCards
     ),
     previousSpectrumCard:
       gameState.previousTurn === null
@@ -92,7 +85,7 @@ export function BuildGameModel(
         : getCardAtIndex(
             gameState.deckSeed,
             gameState.previousTurn.deckIndex,
-            tSpectrumCards
+            wordpackCards
           ),
     submitAction,
     openNameEditor,

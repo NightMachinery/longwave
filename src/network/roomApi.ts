@@ -1,8 +1,10 @@
 import { GameState, GameType, InitialGameState, Team } from "../state/GameState";
+import { normalizeWordpack, WordpackCard, WordpackInfo } from "../state/Wordpack";
 
 export type RoomAction =
   | { type: "set_name"; name: string }
   | { type: "set_game_type"; gameType: GameType }
+  | { type: "set_wordpack"; wordpack: string }
   | { type: "join_team"; team: Team }
   | { type: "set_team"; playerId: string; team: Team }
   | { type: "start_round" }
@@ -106,6 +108,22 @@ export async function postRoomAction(
   return parseJsonResponse<GameState>(response);
 }
 
+export async function fetchWordpacks(): Promise<WordpackInfo[]> {
+  const response = await fetch("/api/wordpacks", {
+    headers: { Accept: "application/json" },
+  });
+
+  return parseJsonResponse<WordpackInfo[]>(response);
+}
+
+export async function fetchWordpackCards(wordpack: string): Promise<WordpackCard[]> {
+  const response = await fetch(`/api/wordpacks/${encodeURIComponent(wordpack)}`, {
+    headers: { Accept: "application/json" },
+  });
+
+  return parseJsonResponse<WordpackCard[]>(response);
+}
+
 export async function requestMigrationLink(roomId: string): Promise<string> {
   const response = await fetch(`${roomApiPath(roomId)}/migrate`, {
     method: "POST",
@@ -149,6 +167,7 @@ export function normalizeGameStatePayload(gameState: Partial<GameState>): GameSt
     players: gameState.players ?? initialState.players,
     clues: gameState.clues ?? initialState.clues,
     psychicIds: gameState.psychicIds ?? initialState.psychicIds,
+    wordpack: gameState.wordpack == null ? normalizeWordpack(gameState.deckLanguage) : normalizeWordpack(gameState.wordpack),
     previousTurn:
       gameState.previousTurn == null
         ? null

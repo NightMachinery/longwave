@@ -6,7 +6,7 @@ import { GameModelContext } from "../../state/GameModelContext";
 import { InitialGameState, RoundPhase, Team } from "../../state/GameState";
 import { RoomMenu } from "./RoomIdHeader";
 import { copyTextToClipboard } from "../../utils/copyTextToClipboard";
-import { requestMigrationLink } from "../../network/roomApi";
+import { fetchWordpacks, requestMigrationLink } from "../../network/roomApi";
 
 jest.mock("../../utils/copyTextToClipboard", () => ({
   copyTextToClipboard: jest.fn(),
@@ -14,6 +14,7 @@ jest.mock("../../utils/copyTextToClipboard", () => ({
 
 jest.mock("../../network/roomApi", () => ({
   requestMigrationLink: jest.fn(),
+  fetchWordpacks: jest.fn(),
 }));
 
 describe("RoomMenu", () => {
@@ -23,10 +24,17 @@ describe("RoomMenu", () => {
   const mockedRequestMigrationLink = requestMigrationLink as jest.MockedFunction<
     typeof requestMigrationLink
   >;
+  const mockedFetchWordpacks = fetchWordpacks as jest.MockedFunction<
+    typeof fetchWordpacks
+  >;
 
   beforeEach(() => {
     mockedCopyTextToClipboard.mockResolvedValue(true);
     mockedRequestMigrationLink.mockResolvedValue("http://localhost/ROOM?migrate=abc123");
+    mockedFetchWordpacks.mockResolvedValue([
+      { id: "English", name: "English" },
+      { id: "Persian", name: "Persian" },
+    ]);
   });
 
   afterEach(() => {
@@ -64,7 +72,7 @@ describe("RoomMenu", () => {
             isObserver: false,
           },
           psychics: [],
-          spectrumCard: ["left", "right"],
+          spectrumCard: { left: { text: "left" }, right: { text: "right" } },
           previousSpectrumCard: null,
           submitAction: jest.fn(),
           openNameEditor: jest.fn(),
@@ -111,6 +119,69 @@ describe("RoomMenu", () => {
     });
   });
 
+  it("opens game settings and changes the wordpack", async () => {
+    const submitAction = jest.fn();
+    const component = render(
+      <GameModelContext.Provider
+        value={{
+          gameState: {
+            ...InitialGameState("en"),
+            wordpack: "English",
+            viewer: {
+              ...InitialGameState("en").viewer,
+              playerId: "player-id",
+              canManageRoom: true,
+            },
+            players: {
+              "player-id": {
+                name: "Player",
+                team: Team.Unset,
+                isModerator: true,
+                isRepresentative: false,
+                isObserver: false,
+              },
+            },
+          },
+          localPlayer: {
+            id: "player-id",
+            name: "Player",
+            team: Team.Unset,
+            isModerator: true,
+            isRepresentative: false,
+            isObserver: false,
+          },
+          psychics: [],
+          spectrumCard: { left: { text: "left" }, right: { text: "right" } },
+          previousSpectrumCard: null,
+          submitAction,
+          openNameEditor: jest.fn(),
+        }}
+      >
+        <Suspense fallback={<div>Loading...</div>}>
+          <I18nextProvider i18n={i18n}>
+            <RoomMenu
+              roomId="ROOM"
+              canonicalRoomUrl="http://localhost/ROOM"
+              showCopyNotice={async () => {}}
+              showNotice={jest.fn()}
+            />
+          </I18nextProvider>
+        </Suspense>
+      </GameModelContext.Provider>
+    );
+
+    fireEvent.click(component.getByText("Game settings"));
+    await waitFor(() => expect(mockedFetchWordpacks).toHaveBeenCalled());
+    fireEvent.change(component.getByLabelText("Wordpack"), {
+      target: { value: "Persian" },
+    });
+
+    expect(submitAction).toHaveBeenCalledWith({
+      type: "set_wordpack",
+      wordpack: "Persian",
+    });
+  });
+
   it("shows reroll prompt only before clues are submitted", () => {
     const component = render(
       <GameModelContext.Provider
@@ -142,7 +213,7 @@ describe("RoomMenu", () => {
             isObserver: false,
           },
           psychics: [],
-          spectrumCard: ["left", "right"],
+          spectrumCard: { left: { text: "left" }, right: { text: "right" } },
           previousSpectrumCard: null,
           submitAction: jest.fn(),
           openNameEditor: jest.fn(),

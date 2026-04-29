@@ -5,13 +5,8 @@ import { GameModelContext } from "../../state/GameModelContext";
 import { I18nextProvider } from "react-i18next";
 import i18n from "./i18nForTests";
 import { RoomAction } from "../../network/roomApi";
+import { fallbackWordpackCards } from "../../state/Wordpack";
 
-const testSpectrumCards = ((key: string) => {
-  if (key === "basic" || key === "advanced") {
-    return [["left", "right"]];
-  }
-  return [];
-}) as any;
 
 export function TestContext(props: {
   gameState: Partial<GameState>;
@@ -34,7 +29,7 @@ export function TestContext(props: {
       value={BuildGameModel(
         mergedGameState,
         props.submitAction || jest.fn(),
-        testSpectrumCards,
+        fallbackWordpackCards,
         () => {}
       )}
     >

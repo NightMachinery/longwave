@@ -21,15 +21,28 @@ For a mode-by-mode explanation of Standard (Teams), Cooperative, and Free Play, 
 
 For the new moderator / representative / observer / psychic behavior and the secure migration flow, see `docs/roles.md`.
 
-## Translations
+## Translations and wordpacks
 
-To add a new translation, follow these steps:
+Longwave has two separate language concepts:
+
+- **UI translations** live in `public/locales/<language>/translation.json` and control buttons, labels, and help text.
+- **Wordpacks** live in `wordpacks/*.jsonl` and control the spectrum prompts used by a room. The room creator/moderator chooses the wordpack during room setup; it defaults to `English` regardless of UI language.
+
+To add a new UI translation, follow these steps:
 
 1. Determine the ISO language code for your target language. See https://www.andiamo.co.uk/resources/iso-language-codes/
 2. Add the new language code to `src/i18n.tsx` in the "allLanguages" array
-3. Copy the contents of `public/locales/en` into a new folder `public/locales\XX` for your language code
-4. Translate the files `translation.json` and `spectrum-cards` into the target language
+3. Copy the contents of `public/locales/en/translation.json` into a new folder `public/locales/XX` for your language code
+4. Translate `translation.json` into the target language
 5. Test the adapted language by starting the local server, selecting the new language and testing the correct display.
+
+To add a new built-in wordpack, create `wordpacks/Name.jsonl`. Each non-empty line is one prompt pair:
+
+```json
+{"left":{"text":"cold"},"right":{"text":"hot"}}
+```
+
+Each side may also include an optional `color` field, for example `{"text":"cold","color":"#3b82f6"}`.
 
 If everything is correct, make the updated files available to the upstream as PR.
 

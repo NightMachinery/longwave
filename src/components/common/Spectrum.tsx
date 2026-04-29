@@ -5,9 +5,10 @@ import { GetContrastingColors } from "./GetContrastingColors";
 import { GetContrastingText } from "./GetContrastingText";
 
 import { useTranslation } from "react-i18next";
+import { WordpackCard } from "../../state/Wordpack";
 
 export function Spectrum(props: {
-  spectrumCard: [string, string];
+  spectrumCard: WordpackCard;
   handleValue?: number;
   targetValue?: number;
   psychicTargetValue?: number;
@@ -17,14 +18,16 @@ export function Spectrum(props: {
   const { t } = useTranslation();
 
   const [primary, secondary] = GetContrastingColors(
-    getStringHash(props.spectrumCard[0])
+    getStringHash(props.spectrumCard.left.text)
   );
+  const primaryColor = props.spectrumCard.left.color ?? primary;
+  const secondaryColor = props.spectrumCard.right.color ?? secondary;
   const cardBackStyle: React.CSSProperties = {
     padding: 8,
     fontWeight: "bold",
   };
-  const primaryText = GetContrastingText(primary);
-  const secondaryText = GetContrastingText(secondary);
+  const primaryText = GetContrastingText(primaryColor);
+  const secondaryText = GetContrastingText(secondaryColor);
 
   let handleStyle: React.CSSProperties = {
     height: 18,
@@ -92,11 +95,11 @@ export function Spectrum(props: {
     <div style={{ padding: 8 }}>
       <CenteredColumn style={{ alignItems: "stretch" }}>
         <CenteredRow style={{ justifyContent: "space-between" }}>
-          <div style={{ ...cardBackStyle, backgroundColor: primary, color: primaryText }}>
-            {props.spectrumCard[0]}
+          <div style={{ ...cardBackStyle, backgroundColor: primaryColor, color: primaryText }}>
+            {props.spectrumCard.left.text}
           </div>
-          <div style={{ ...cardBackStyle, backgroundColor: secondary, color: secondaryText }}>
-            {props.spectrumCard[1]}
+          <div style={{ ...cardBackStyle, backgroundColor: secondaryColor, color: secondaryText }}>
+            {props.spectrumCard.right.text}
           </div>
         </CenteredRow>
         <div style={{ padding: "16px 32px" }}>
@@ -108,7 +111,7 @@ export function Spectrum(props: {
               backgroundColor: "transparent",
             }}
             railStyle={{
-              background: `linear-gradient(90deg, ${primary} 0%, ${secondary} 100%)`,
+              background: `linear-gradient(90deg, ${primaryColor} 0%, ${secondaryColor} 100%)`,
               height: 8,
             }}
             handleStyle={handleStyle}

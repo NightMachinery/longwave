@@ -80,6 +80,7 @@ type RoomState struct {
 	CoopBonusTurns    int                    `json:"coopBonusTurns"`
 	PreviousTurn      *TurnSummaryModel      `json:"previousTurn"`
 	DeckLanguage      string                 `json:"deckLanguage"`
+	Wordpack          string                 `json:"wordpack"`
 	CreatorID         string                 `json:"creatorId"`
 	PsychicCount      int                    `json:"psychicCount"`
 	ClueQuota         int                    `json:"clueQuota"`
@@ -113,6 +114,7 @@ func InitialRoomState(deckLanguage string) RoomState {
 	if strings.TrimSpace(deckLanguage) == "" {
 		deckLanguage = "en"
 	}
+	wordpack := normalizeWordpack(deckLanguage)
 	return RoomState{
 		GameType:          GameTypeTeams,
 		RoundPhase:        RoundPhaseSetupGame,
@@ -132,6 +134,7 @@ func InitialRoomState(deckLanguage string) RoomState {
 		CoopBonusTurns:    0,
 		PreviousTurn:      nil,
 		DeckLanguage:      deckLanguage,
+		Wordpack:          wordpack,
 		CreatorID:         "",
 		PsychicCount:      1,
 		ClueQuota:         1,
@@ -198,5 +201,13 @@ func normalizeRoomStateShape(room *RoomState) {
 	}
 	if room.PreviousTurn != nil && room.PreviousTurn.Clues == nil {
 		room.PreviousTurn.Clues = []Clue{}
+	}
+	if strings.TrimSpace(room.Wordpack) == "" {
+		room.Wordpack = normalizeWordpack(room.DeckLanguage)
+	} else {
+		room.Wordpack = normalizeWordpack(room.Wordpack)
+	}
+	if strings.TrimSpace(room.DeckLanguage) == "" {
+		room.DeckLanguage = "en"
 	}
 }

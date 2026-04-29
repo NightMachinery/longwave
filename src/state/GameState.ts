@@ -1,5 +1,6 @@
 import { RandomFourCharacterString } from "./RandomFourCharacterString";
 import { TFunction } from "i18next";
+import { normalizeWordpack } from "./Wordpack";
 
 export enum RoundPhase {
   SetupGame,
@@ -105,6 +106,7 @@ export interface GameState {
   coopBonusTurns: number;
   previousTurn: TurnSummaryModel | null;
   deckLanguage: string | null;
+  wordpack: string;
   creatorId: string;
   psychicCount: number;
   clueQuota: number;
@@ -132,6 +134,7 @@ export function InitialGameState(deckLanguage: string = "en"): GameState {
     coopBonusTurns: 0,
     previousTurn: null,
     deckLanguage,
+    wordpack: normalizeWordpack(deckLanguage),
     creatorId: "",
     psychicCount: 1,
     clueQuota: 1,

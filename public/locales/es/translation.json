@@ -25,7 +25,10 @@
     "reroll_prompt": "Reroll prompt",
     "save_name": "Save name",
     "psychics": "Psychics",
-    "clue_quota": "Clue quota"
+    "clue_quota": "Clue quota",
+    "game_settings": "Game settings",
+    "wordpack": "Wordpack",
+    "back": "Back"
   },
   "spectrum": {
     "guessing": "Decidiendo...",
@@ -94,7 +97,8 @@
     "standard_game": "Estándar (por equipos): 4+ jugadores",
     "coop_game": "Cooperativo: 2+ jugadores",
     "free_game": "Partida libre: 2+ jugadores",
-    "waiting_for_mod": "Waiting for a moderator to choose a mode."
+    "waiting_for_mod": "Waiting for a moderator to choose a mode.",
+    "wordpack": "Wordpack"
   },
   "viewscore": {
     "player_clue": "Pista de {{givername}}",

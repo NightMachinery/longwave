@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
 import {
   joinRoom,
   normalizeGameStatePayload,
@@ -21,7 +20,6 @@ export function useNetworkBackedGameState(args: {
   playerName: string;
   migrationKey?: string | null;
 }): [GameState | null, (action: RoomAction) => void, RoomConnectionError | null] {
-  const { i18n } = useTranslation("spectrum-cards");
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [connectionError, setConnectionError] = useState<RoomConnectionError | null>(null);
 
@@ -45,7 +43,6 @@ export function useNetworkBackedGameState(args: {
       roomId: args.roomId,
       playerName: args.playerName,
       migrationKey: args.migrationKey,
-      deckLanguage: i18n.language,
     })
       .then((joinedState) => {
         if (isDisposed) {
@@ -93,7 +90,7 @@ export function useNetworkBackedGameState(args: {
       isDisposed = true;
       unsubscribe();
     };
-  }, [args.migrationKey, args.playerName, args.roomId, i18n.language]);
+  }, [args.migrationKey, args.playerName, args.roomId]);
 
   return [
     gameState,

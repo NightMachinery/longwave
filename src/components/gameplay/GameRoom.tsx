@@ -13,6 +13,7 @@ import { FakeRooms } from "./FakeRooms";
 import { useTranslation } from "react-i18next";
 import { Button } from "../common/Button";
 import { CenteredColumn } from "../common/LayoutElements";
+import { useWordpackCards } from "../hooks/useWordpackCards";
 import {
   getMigrationKey,
   readStoredPlayerName,
@@ -47,7 +48,7 @@ export function GameRoom() {
     playerName,
     migrationKey,
   });
-  const cardsTranslation = useTranslation("spectrum-cards");
+  const wordpackCards = useWordpackCards(gameState?.wordpack);
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -113,7 +114,7 @@ export function GameRoom() {
     return null;
   }
 
-  const gameModel = BuildGameModel(gameState, submitAction, cardsTranslation.t, () => {
+  const gameModel = BuildGameModel(gameState, submitAction, wordpackCards, () => {
     setIsEditingName(true);
   });
 

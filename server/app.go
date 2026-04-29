@@ -17,6 +17,7 @@ import (
 const (
 	defaultAddr            = "127.0.0.1:3310"
 	defaultBuildDir        = "build"
+	defaultWordpackDir     = "wordpacks"
 	defaultDBPath          = ".self_host/data/rooms.sqlite"
 	defaultRoomTTL         = 7 * 24 * time.Hour
 	defaultCleanupInterval = time.Hour
@@ -27,6 +28,7 @@ const (
 type Config struct {
 	Addr            string
 	BuildDir        string
+	WordpackDir     string
 	DBPath          string
 	RoomTTL         time.Duration
 	CleanupInterval time.Duration
@@ -37,6 +39,7 @@ type App struct {
 	config      Config
 	store       *Store
 	hub         *RoomHub
+	wordpacks   *WordpackCatalog
 	handler     http.Handler
 	server      *http.Server
 	cleanupStop chan struct{}
@@ -80,6 +83,7 @@ func ConfigFromEnv() (Config, error) {
 	return Config{
 		Addr:            firstNonEmpty(os.Getenv("LONGWAVE_ADDR"), defaultAddr),
 		BuildDir:        firstNonEmpty(os.Getenv("LONGWAVE_BUILD_DIR"), defaultBuildDir),
+		WordpackDir:     firstNonEmpty(os.Getenv("LONGWAVE_WORDPACK_DIR"), defaultWordpackDir),
 		DBPath:          firstNonEmpty(os.Getenv("LONGWAVE_DB_PATH"), defaultDBPath),
 		RoomTTL:         roomTTL,
 		CleanupInterval: cleanupInterval,
@@ -99,6 +103,9 @@ func New(config Config) (*App, error) {
 	if config.DBPath == "" {
 		config.DBPath = defaultDBPath
 	}
+	if config.WordpackDir == "" {
+		config.WordpackDir = defaultWordpackDir
+	}
 	if config.RoomTTL <= 0 {
 		config.RoomTTL = defaultRoomTTL
 	}
@@ -113,9 +120,11 @@ func New(config Config) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	app := &App{config: config, store: store, hub: NewRoomHub(), cleanupStop: make(chan struct{})}
+	app := &App{config: config, store: store, hub: NewRoomHub(), wordpacks: NewWordpackCatalog(config.WordpackDir), cleanupStop: make(chan struct{})}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", app.handleHealthz)
+	mux.HandleFunc("GET /api/wordpacks", app.handleListWordpacks)
+	mux.HandleFunc("GET /api/wordpacks/{wordpackID}", app.handleGetWordpack)
 	mux.HandleFunc("POST /api/rooms/{roomID}/join", app.handleJoinRoom)
 	mux.HandleFunc("POST /api/rooms/{roomID}/migrate", app.handleMigrateRoom)
 	mux.HandleFunc("GET /api/rooms/{roomID}", app.handleGetRoom)
@@ -169,6 +178,25 @@ func (app *App) cleanupExpiredRooms() {
 func (app *App) handleHealthz(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	_, _ = w.Write([]byte("ok\n"))
+}
+
+func (app *App) handleListWordpacks(w http.ResponseWriter, _ *http.Request) {
+	wordpacks, err := app.wordpacks.List()
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSONResponseValue(w, http.StatusOK, wordpacks)
+}
+
+func (app *App) handleGetWordpack(w http.ResponseWriter, r *http.Request) {
+	wordpackID := strings.TrimSpace(r.PathValue("wordpackID"))
+	cards, err := app.wordpacks.Load(wordpackID)
+	if err != nil {
+		writeJSONError(w, http.StatusNotFound, err.Error())
+		return
+	}
+	writeJSONResponseValue(w, http.StatusOK, cards)
 }
 
 func (app *App) handleJoinRoom(w http.ResponseWriter, r *http.Request) {
@@ -389,7 +417,7 @@ func (app *App) handleRoomAction(w http.ResponseWriter, r *http.Request) {
 		if _, ok := room.Players[result.playerID]; !ok {
 			return errUnauthorized
 		}
-		if err := applyAction(room, result.playerID, action); err != nil {
+		if err := applyAction(room, result.playerID, action, app.wordpacks); err != nil {
 			return err
 		}
 		normalizeRoundState(room)
@@ -402,6 +430,7 @@ func (app *App) handleRoomAction(w http.ResponseWriter, r *http.Request) {
 		} else if strings.Contains(err.Error(), "required") ||
 			strings.Contains(err.Error(), "cannot") ||
 			strings.Contains(err.Error(), "unsupported") ||
+			strings.Contains(err.Error(), "unknown") ||
 			strings.Contains(err.Error(), "only") ||
 			strings.Contains(err.Error(), "not found") ||
 			strings.Contains(err.Error(), "must be") ||

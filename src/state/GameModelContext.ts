@@ -1,6 +1,7 @@
 import { Team, InitialGameState } from "./GameState";
 import { createContext } from "react";
 import { GameModel } from "./BuildGameModel";
+import { fallbackWordpackCards } from "./Wordpack";
 
 export const GameModelContext = createContext<GameModel>({
   gameState: InitialGameState("en"),
@@ -13,7 +14,7 @@ export const GameModelContext = createContext<GameModel>({
     isObserver: false,
   },
   psychics: [],
-  spectrumCard: ["left", "right"],
+  spectrumCard: fallbackWordpackCards[0],
   previousSpectrumCard: null,
   submitAction: (action) => {
     console.warn(

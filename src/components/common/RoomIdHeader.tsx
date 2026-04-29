@@ -8,6 +8,7 @@ import {
   faUserEdit,
   faUserPlus,
   faWandMagicSparkles,
+  faSliders,
 } from "@fortawesome/free-solid-svg-icons";
 import Tippy from "@tippyjs/react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -18,6 +19,7 @@ import { buildCanonicalRoomUrl, buildMigratedRoomUrl } from "../../utils/roomIde
 import { requestMigrationLink } from "../../network/roomApi";
 import { RoundPhase } from "../../state/GameState";
 import { useTranslation } from "react-i18next";
+import { useWordpacks } from "../hooks/useWordpacks";
 
 type Notice = {
   kind: "success" | "error";
@@ -142,26 +144,22 @@ export function RoomMenu(props: {
 }) {
   const { t } = useTranslation();
   const { gameState, openNameEditor, submitAction } = useContext(GameModelContext);
+  const [isEditingGameSettings, setIsEditingGameSettings] = useState(false);
 
   const menuItemProps = {
     style: { margin: 8, cursor: "pointer" },
     tabIndex: 0,
   };
 
-  const updateIntegerSetting = (field: "psychicCount" | "clueQuota", delta: number) => {
-    const currentValue = gameState[field];
-    const nextValue = Math.max(1, currentValue + delta);
-    if (field === "psychicCount") {
-      submitAction({ type: "set_psychic_count", psychicCount: nextValue });
-    } else {
-      submitAction({ type: "set_clue_quota", clueQuota: nextValue });
-    }
-  };
 
   const canRerollPrompt =
     gameState.viewer.canManageRoom &&
     gameState.roundPhase === RoundPhase.GiveClue &&
     gameState.clues.length === 0;
+
+  if (isEditingGameSettings) {
+    return <GameSettingsPanel onBack={() => setIsEditingGameSettings(false)} />;
+  }
 
   return (
     <div>
@@ -198,24 +196,8 @@ export function RoomMenu(props: {
       </div>
       {gameState.viewer.canManageRoom && (
         <>
-          <div style={{ margin: 8 }}>
-            <FontAwesomeIcon icon={faWandMagicSparkles} /> {t("roomidheader.psychics")}:{" "}
-            {gameState.psychicCount}
-            <button type="button" onClick={() => updateIntegerSetting("psychicCount", -1)}>
-              -
-            </button>
-            <button type="button" onClick={() => updateIntegerSetting("psychicCount", 1)}>
-              +
-            </button>
-          </div>
-          <div style={{ margin: 8 }}>
-            {t("roomidheader.clue_quota", "Clue quota")}: {gameState.clueQuota}
-            <button type="button" onClick={() => updateIntegerSetting("clueQuota", -1)}>
-              -
-            </button>
-            <button type="button" onClick={() => updateIntegerSetting("clueQuota", 1)}>
-              +
-            </button>
+          <div {...menuItemProps} onClick={() => setIsEditingGameSettings(true)}>
+            <FontAwesomeIcon icon={faSliders} /> {t("roomidheader.game_settings", "Game settings")}
           </div>
           <div {...menuItemProps} onClick={() => submitAction({ type: "play_again" })}>
             <FontAwesomeIcon icon={faArrowsRotate} /> {t("roomidheader.play_again")}
@@ -235,6 +217,66 @@ export function RoomMenu(props: {
       )}
       <div {...menuItemProps} onClick={openNameEditor}>
         <FontAwesomeIcon icon={faUserEdit} /> {t("roomidheader.change_name")}
+      </div>
+    </div>
+  );
+}
+
+function GameSettingsPanel(props: { onBack: () => void }) {
+  const { t } = useTranslation();
+  const { gameState, submitAction } = useContext(GameModelContext);
+  const wordpacks = useWordpacks();
+
+  const updateIntegerSetting = (field: "psychicCount" | "clueQuota", delta: number) => {
+    const currentValue = gameState[field];
+    const nextValue = Math.max(1, currentValue + delta);
+    if (field === "psychicCount") {
+      submitAction({ type: "set_psychic_count", psychicCount: nextValue });
+    } else {
+      submitAction({ type: "set_clue_quota", clueQuota: nextValue });
+    }
+  };
+
+  return (
+    <div style={{ minWidth: 240 }}>
+      <div style={{ margin: 8, fontWeight: 700 }}>
+        <FontAwesomeIcon icon={faSliders} /> {t("roomidheader.game_settings", "Game settings")}
+      </div>
+      <label style={{ display: "block", margin: 8 }} htmlFor="header-wordpack-select">
+        {t("roomidheader.wordpack", "Wordpack")}
+      </label>
+      <select
+        id="header-wordpack-select"
+        value={gameState.wordpack}
+        onChange={(event) => submitAction({ type: "set_wordpack", wordpack: event.target.value })}
+        style={{ margin: 8, padding: 6, borderRadius: 8, width: "calc(100% - 16px)" }}
+      >
+        {wordpacks.map((wordpack) => (
+          <option key={wordpack.id} value={wordpack.id}>
+            {wordpack.name}
+          </option>
+        ))}
+      </select>
+      <div style={{ margin: 8 }}>
+        <FontAwesomeIcon icon={faWandMagicSparkles} /> {t("roomidheader.psychics")}: {gameState.psychicCount}
+        <button type="button" onClick={() => updateIntegerSetting("psychicCount", -1)}>
+          -
+        </button>
+        <button type="button" onClick={() => updateIntegerSetting("psychicCount", 1)}>
+          +
+        </button>
+      </div>
+      <div style={{ margin: 8 }}>
+        {t("roomidheader.clue_quota", "Clue quota")}: {gameState.clueQuota}
+        <button type="button" onClick={() => updateIntegerSetting("clueQuota", -1)}>
+          -
+        </button>
+        <button type="button" onClick={() => updateIntegerSetting("clueQuota", 1)}>
+          +
+        </button>
+      </div>
+      <div style={{ margin: 8, cursor: "pointer" }} tabIndex={0} onClick={props.onBack}>
+        {t("roomidheader.back", "Back")}
       </div>
     </div>
   );

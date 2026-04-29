@@ -10,14 +10,12 @@ import {
   GameType,
   RoundPhase,
 } from "../../state/GameState";
-import { useTranslation } from "react-i18next";
 import { RoomAction } from "../../network/roomApi";
+import { fallbackWordpackCards } from "../../state/Wordpack";
 
 export function FakeRooms() {
-  const cardsTranslation = useTranslation("spectrum-cards");
-
   const [gameState, setGameState] = useState<GameState>({
-    ...InitialGameState(cardsTranslation.i18n.language),
+    ...InitialGameState(),
     gameType: GameType.Teams,
     roundPhase: RoundPhase.PickTeams,
     viewer: {
@@ -79,7 +77,7 @@ export function FakeRooms() {
             },
           },
           submitAction,
-          cardsTranslation.t,
+          fallbackWordpackCards,
           () => {}
         )}
       >

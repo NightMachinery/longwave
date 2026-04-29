@@ -43,6 +43,7 @@ type ActionRequest struct {
 	CounterGuess string `json:"counterGuess,omitempty"`
 	Clue         string `json:"clue,omitempty"`
 	Value        *bool  `json:"value,omitempty"`
+	Wordpack     string `json:"wordpack,omitempty"`
 }
 
 func isTeamGameOver(room *RoomState) bool {
@@ -61,7 +62,7 @@ func isGameOver(room *RoomState) bool {
 	return isTeamGameOver(room) || isCoopGameOver(room)
 }
 
-func applyAction(room *RoomState, viewerID string, action ActionRequest) error {
+func applyAction(room *RoomState, viewerID string, action ActionRequest, wordpacks *WordpackCatalog) error {
 	if _, ok := room.Players[viewerID]; !ok {
 		return errUnauthorized
 	}
@@ -75,6 +76,19 @@ func applyAction(room *RoomState, viewerID string, action ActionRequest) error {
 		player := room.Players[viewerID]
 		player.Name = name
 		room.Players[viewerID] = player
+		return nil
+	case "set_wordpack":
+		if !canManageRoom(room, viewerID) {
+			return errUnauthorized
+		}
+		wordpack := normalizeWordpack(action.Wordpack)
+		if wordpacks == nil {
+			wordpacks = NewWordpackCatalog(defaultWordpackDir)
+		}
+		if !wordpacks.Exists(wordpack) {
+			return fmt.Errorf("unknown wordpack %q", wordpack)
+		}
+		room.Wordpack = wordpack
 		return nil
 	case "set_game_type":
 		if !canManageRoom(room, viewerID) || action.GameType == nil {
@@ -236,7 +250,9 @@ func applyAction(room *RoomState, viewerID string, action ActionRequest) error {
 		psychicCount := room.PsychicCount
 		clueQuota := room.ClueQuota
 		deckLanguage := room.DeckLanguage
+		wordpack := room.Wordpack
 		*room = InitialRoomState(deckLanguage)
+		room.Wordpack = normalizeWordpack(wordpack)
 		room.Players = preservedPlayers
 		room.CreatorID = creatorID
 		room.PsychicCount = psychicCount

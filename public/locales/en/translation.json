@@ -25,7 +25,10 @@
     "migrate_device_success": "Migration link copied.",
     "copy_link_failed": "Could not copy the link. Copy it manually from the address bar.",
     "psychics": "Psychics",
-    "clue_quota": "Clue quota"
+    "clue_quota": "Clue quota",
+    "game_settings": "Game settings",
+    "wordpack": "Wordpack",
+    "back": "Back"
   },
   "spectrum": {
     "guessing": "Guessing...",
@@ -102,7 +105,8 @@
     "standard_game": "Standard (Teams): 4+ Players",
     "coop_game": "Cooperative: 2+ Players",
     "free_game": "Free Play: 2+ Players",
-    "waiting_for_mod": "Waiting for a moderator to choose a mode."
+    "waiting_for_mod": "Waiting for a moderator to choose a mode.",
+    "wordpack": "Wordpack"
   },
   "viewscore": {
     "player_clue": "{{givername}}'s clue",

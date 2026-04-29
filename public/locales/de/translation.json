@@ -25,7 +25,10 @@
     "reroll_prompt": "Reroll prompt",
     "save_name": "Save name",
     "psychics": "Psychics",
-    "clue_quota": "Clue quota"
+    "clue_quota": "Clue quota",
+    "game_settings": "Game settings",
+    "wordpack": "Wordpack",
+    "back": "Back"
   },
   "spectrum": {
     "guessing": "Raten...",
@@ -94,7 +97,8 @@
     "standard_game": "Standard (Teams): 4+ Spieler",
     "coop_game": "Koop Modus: 2+ Spieler",
     "free_game": "Freies Spiel: 2+ Spieler",
-    "waiting_for_mod": "Waiting for a moderator to choose a mode."
+    "waiting_for_mod": "Waiting for a moderator to choose a mode.",
+    "wordpack": "Wordpack"
   },
   "viewscore": {
     "player_clue": "{{givername}}'s Hinweis",
