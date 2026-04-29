@@ -14,7 +14,13 @@ export function CounterGuess() {
 
   return (
     <div>
-      <Spectrum spectrumCard={spectrumCard} guessingValue={gameState.guess} />
+      <Spectrum
+        spectrumCard={spectrumCard}
+        psychicTargetValue={
+          gameState.viewer.isCurrentPsychic ? gameState.spectrumTarget : undefined
+        }
+        guessingValue={gameState.guess}
+      />
       <CenteredColumn>
         {gameState.clues.map((clue) => (
           <div key={`${clue.authorId}-${clue.order}`}>

@@ -29,7 +29,8 @@
   },
   "spectrum": {
     "guessing": "Guessing...",
-    "target": "Target"
+    "target": "Target",
+    "psychic_target": "True target"
   },
   "title": {
     "longwave": "Longwave"

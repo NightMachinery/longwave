@@ -10,6 +10,7 @@ export function Spectrum(props: {
   spectrumCard: [string, string];
   handleValue?: number;
   targetValue?: number;
+  psychicTargetValue?: number;
   guessingValue?: number;
   onChange?: (newValue: number) => void;
 }) {
@@ -60,10 +61,30 @@ export function Spectrum(props: {
     };
   }
 
+  if (props.psychicTargetValue !== undefined) {
+    marks[props.psychicTargetValue] = {
+      style: {
+        fontWeight: "bold",
+        color: "#7c2d12",
+        cursor: "auto",
+        backgroundColor: "#ffedd5",
+        border: "1px solid #fdba74",
+        borderRadius: 999,
+        padding: "2px 6px",
+      },
+      label: t("spectrum.psychic_target", "True target"),
+    };
+  }
+
   if (props.guessingValue !== undefined) {
+    const existing = marks[props.guessingValue];
     marks[props.guessingValue] = {
-      style: { fontWeight: "bold", color: "black", cursor: "auto" },
-      label: t("spectrum.guessing"),
+      style: existing
+        ? { ...existing.style, cursor: "auto" }
+        : { fontWeight: "bold", color: "black", cursor: "auto" },
+      label: existing
+        ? `${existing.label} / ${t("spectrum.guessing")}`
+        : t("spectrum.guessing"),
     };
   }
 

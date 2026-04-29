@@ -24,6 +24,9 @@ export function MakeGuess() {
       <Spectrum
         spectrumCard={spectrumCard}
         handleValue={gameState.guess}
+        psychicTargetValue={
+          gameState.viewer.isCurrentPsychic ? gameState.spectrumTarget : undefined
+        }
         guessingValue={!gameState.viewer.canSetGuess ? gameState.guess : undefined}
         onChange={(guess: number) => {
           if (gameState.viewer.canSetGuess) {

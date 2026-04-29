@@ -25,7 +25,8 @@
   },
   "spectrum": {
     "guessing": "En cours de déduction...",
-    "target": "Cible"
+    "target": "Cible",
+    "psychic_target": "True target"
   },
   "title": {
     "longwave": "Grandes ondes"

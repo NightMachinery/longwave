@@ -632,7 +632,13 @@ func counterGuessPool(room *RoomState) actingPool {
 
 func actingPoolForPhase(room *RoomState, counter bool) actingPool {
 	pool := actingPool{}
-	for _, playerID := range activePlayerIDs(room) {
+	playerIDs := make([]string, 0, len(room.Players))
+	for playerID := range room.Players {
+		playerIDs = append(playerIDs, playerID)
+	}
+	sort.Strings(playerIDs)
+
+	for _, playerID := range playerIDs {
 		player := room.Players[playerID]
 		if room.GameType == GameTypeTeams {
 			targetTeam := room.ActingTeam
@@ -643,12 +649,14 @@ func actingPoolForPhase(room *RoomState, counter bool) actingPool {
 				continue
 			}
 		}
-		if isPsychic(room, playerID) {
+		if player.IsRepresentative {
+			pool.explicitReps = append(pool.explicitReps, playerID)
+		}
+		if player.IsObserver || isPsychic(room, playerID) {
 			continue
 		}
 		pool.allActive = append(pool.allActive, playerID)
 		if player.IsRepresentative {
-			pool.explicitReps = append(pool.explicitReps, playerID)
 			pool.availableReps = append(pool.availableReps, playerID)
 		} else {
 			pool.candidateFallback = append(pool.candidateFallback, playerID)
@@ -783,7 +791,10 @@ func canSeeTarget(room *RoomState, viewerID string) bool {
 	if room.RoundPhase == RoundPhaseViewScore {
 		return true
 	}
-	return room.RoundPhase == RoundPhaseGiveClue && isPsychic(room, viewerID)
+	if !isPsychic(room, viewerID) {
+		return false
+	}
+	return room.RoundPhase == RoundPhaseGiveClue || room.RoundPhase == RoundPhaseMakeGuess || room.RoundPhase == RoundPhaseCounterGuess
 }
 
 func canStartRound(room *RoomState, viewerID string) bool {

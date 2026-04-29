@@ -36,6 +36,15 @@ export function GiveClue() {
         <Animate animation="wipe-reveal-right">
           <Spectrum spectrumCard={spectrumCard} />
         </Animate>
+        {gameState.viewer.canManageRoom && gameState.clues.length === 0 && (
+          <CenteredColumn>
+            <Button
+              text={t("roomidheader.reroll_prompt")}
+              onClick={() => submitAction({ type: "reroll_round" })}
+              variant="secondary"
+            />
+          </CenteredColumn>
+        )}
         <CenteredColumn>
           <div>
             {t(
@@ -60,7 +69,7 @@ export function GiveClue() {
     <div>
       <Animate animation="wipe-reveal-right">
         <Spectrum
-          targetValue={gameState.spectrumTarget}
+          psychicTargetValue={gameState.spectrumTarget}
           spectrumCard={spectrumCard}
         />
       </Animate>
@@ -101,6 +110,13 @@ export function GiveClue() {
             </div>
           </Info>
         </CenteredRow>
+        {gameState.viewer.canManageRoom && gameState.clues.length === 0 && (
+          <Button
+            text={t("roomidheader.reroll_prompt")}
+            onClick={() => submitAction({ type: "reroll_round" })}
+            variant="secondary"
+          />
+        )}
         <Button
           text={t("giveclue.give_clue")}
           onClick={submit}

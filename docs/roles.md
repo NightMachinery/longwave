@@ -13,7 +13,7 @@ Longwave now supports server-enforced room roles and filtered hidden information
   - Representatives are optional.
   - If a relevant acting pool has no representatives, everyone in that pool can submit the guess.
   - If representatives exist, only they can submit the guess for that pool.
-  - If an assigned representative is unavailable because they are currently a psychic or observer, Longwave derives a temporary replacement for that phase.
+  - If an assigned representative is unavailable because they are currently a psychic or observer, Longwave derives a temporary replacement for that phase. Only the representative or derived temporary replacement may move and submit the guess while representative restrictions are active.
 - **Observer**
   - Observers stay in the room but are removed from active play.
   - They keep their stored team, moderator, and representative flags while observing.
@@ -40,8 +40,8 @@ Rules:
 
 The backend now filters room views per player session:
 
-- Current psychics can see the round target during clueing.
-- Non-psychics cannot.
+- Current psychics can see the round target during clueing and continue to see the true target during guessing and counter-guessing, with a distinct private marker.
+- Non-psychics cannot see the true target before reveal.
 - Once the score/reveal phase is reached, everyone can see the target.
 
 ## Session and migration model
@@ -51,5 +51,6 @@ Room access now uses a room-scoped server session cookie instead of the older `r
 - **Copy room link** shares the clean room URL.
 - **Migrate device** asks the server for a one-time migration link.
 - Opening that migration link on another device transfers the same in-room identity there.
+- **Reroll prompt** is available to moderators during clueing before any clue is submitted; it draws a new spectrum prompt/target while keeping the current psychics.
 - **Play Again** resets the current game while preserving the room, creator, player list, and room settings.
 - **Reset Room ID** rotates the join code so the old public link stops accepting new joins.
