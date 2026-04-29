@@ -44,6 +44,8 @@ To add a new built-in wordpack, create `wordpacks/Name.jsonl`. Each non-empty li
 
 Each side may also include an optional `color` field, for example `{"text":"cold","color":"#3b82f6"}`.
 
+See [`docs/wordpacks.md`](docs/wordpacks.md) for the current built-in deck list and validation checklist.
+
 If everything is correct, make the updated files available to the upstream as PR.
 
 ### Structure of the translation.json
