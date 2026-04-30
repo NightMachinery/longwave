@@ -1,5 +1,4 @@
 import { GameState, Team } from "./GameState";
-import memoize from "lodash/memoize";
 import { RoomAction } from "../network/roomApi";
 import { fallbackWordpackCards, WordpackCard } from "./Wordpack";
 
@@ -26,9 +25,9 @@ export interface GameModel {
   openNameEditor: () => void;
 }
 
-const getSeededDeck = memoize((seed: string, cards: WordpackCard[]) =>
-  shuffleSeed.shuffle(cards, seed)
-);
+function getSeededDeck(seed: string, cards: WordpackCard[]): WordpackCard[] {
+  return shuffleSeed.shuffle(cards, seed);
+}
 
 function getCardAtIndex(
   seed: string,
