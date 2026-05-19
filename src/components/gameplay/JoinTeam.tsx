@@ -5,6 +5,7 @@ import { Button } from "../common/Button";
 import { GameModelContext } from "../../state/GameModelContext";
 import { useTranslation } from "react-i18next";
 import { PlayerManagementCard, SectionTitle } from "./PlayerManagement";
+import { PreviousGameResultBanner } from "./PreviousGameResult";
 
 export function JoinTeam() {
   const { t } = useTranslation();
@@ -28,6 +29,7 @@ export function JoinTeam() {
 
   return (
     <CenteredColumn style={{ alignItems: "stretch", gap: 16 }}>
+      <PreviousGameResultBanner />
       <SectionTitle>{t("jointeam.join_team")}:</SectionTitle>
       <CenteredRow style={{ alignItems: "stretch", width: "100%", gap: 12, flexWrap: "wrap" }}>
         <TeamPane

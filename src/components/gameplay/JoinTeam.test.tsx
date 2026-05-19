@@ -1,7 +1,8 @@
 import { render, fireEvent, within } from "@testing-library/react";
-import { InitialGameState, Team } from "../../state/GameState";
+import { GameType, InitialGameState, RoundPhase, Team } from "../../state/GameState";
 import { JoinTeam } from "./JoinTeam";
 import { TestContext } from "./TestContext";
+import { PlayerManagementCard } from "./PlayerManagement";
 
 test("dispatches join_team when selecting a team", async () => {
   const submitAction = jest.fn();
@@ -41,6 +42,40 @@ test("dispatches join_team when selecting a team", async () => {
     type: "join_team",
     team: Team.Left,
   });
+});
+
+test("shows previous game result during team setup", () => {
+  const component = render(
+    <TestContext
+      gameState={{
+        ...InitialGameState(),
+        gameType: GameType.Teams,
+        roundPhase: RoundPhase.PickTeams,
+        previousGameResult: {
+          gameType: GameType.Teams,
+          winnerTeam: Team.Left,
+          loserTeam: Team.Right,
+          leftScore: 10,
+          rightScore: 7,
+          coopScore: 0,
+        },
+        players: {
+          player1: {
+            name: "Player",
+            team: Team.Left,
+            isModerator: false,
+            isRepresentative: false,
+            isObserver: false,
+          },
+        },
+      }}
+      playerId="player1"
+    >
+      <JoinTeam />
+    </TestContext>
+  );
+
+  expect(component.getByText("LEFT BRAIN beat RIGHT BRAIN, 10-7.")).toBeTruthy();
 });
 
 test("allows moderators to force-assign joined players to a team", async () => {

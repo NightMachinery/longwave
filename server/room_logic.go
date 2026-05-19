@@ -270,6 +270,9 @@ func applyAction(room *RoomState, viewerID string, action ActionRequest, wordpac
 		if !canManageRoom(room, viewerID) {
 			return errUnauthorized
 		}
+		if isGameOver(room) {
+			room.PreviousGameResult = previousGameResult(room)
+		}
 		playAgainRoom(room)
 		return nil
 	case "reroll_round":
@@ -520,6 +523,28 @@ func playAgainRoom(room *RoomState) {
 	room.RoundPhase = RoundPhaseReady
 	room.ActingTeam = TeamUnset
 }
+
+func previousGameResult(room *RoomState) *PreviousGameResult {
+	result := &PreviousGameResult{
+		GameType:   room.GameType,
+		WinnerTeam: TeamUnset,
+		LoserTeam:  TeamUnset,
+		LeftScore:  room.LeftScore,
+		RightScore: room.RightScore,
+		CoopScore:  room.CoopScore,
+	}
+	if room.GameType == GameTypeTeams {
+		if room.LeftScore > room.RightScore {
+			result.WinnerTeam = TeamLeft
+			result.LoserTeam = TeamRight
+		} else if room.RightScore > room.LeftScore {
+			result.WinnerTeam = TeamRight
+			result.LoserTeam = TeamLeft
+		}
+	}
+	return result
+}
+
 
 func rerollRound(room *RoomState) error {
 	if room.RoundPhase != RoundPhaseGiveClue {

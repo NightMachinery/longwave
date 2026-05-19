@@ -76,6 +76,8 @@
     "join_right": "Join",
     "start_game": "Start game",
     "assign_players": "Manage players",
+    "randomize_assignments": "Randomize player assignments",
+    "randomize_teams": "Randomize Teams",
     "unassigned_count": "Unassigned players: {{count}}",
     "waiting_for_mod": "Waiting for a moderator to start the game."
   },
@@ -147,5 +149,9 @@
     "observe": "Observe",
     "demote_mod": "Demote mod",
     "promote_mod": "Promote mod"
+  },
+  "previousgameresult": {
+    "teams": "{{winner}} beat {{loser}}, {{leftScore}}-{{rightScore}}.",
+    "coop": "Previous game score: {{score}} points."
   }
 }

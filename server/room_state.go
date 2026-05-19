@@ -61,6 +61,15 @@ type TurnSummaryModel struct {
 	Guess          int    `json:"guess"`
 }
 
+type PreviousGameResult struct {
+	GameType   GameType `json:"gameType"`
+	WinnerTeam Team     `json:"winnerTeam"`
+	LoserTeam  Team     `json:"loserTeam"`
+	LeftScore  int      `json:"leftScore"`
+	RightScore int      `json:"rightScore"`
+	CoopScore  int      `json:"coopScore"`
+}
+
 type RoomState struct {
 	GameType          GameType               `json:"gameType"`
 	RoundPhase        RoundPhase             `json:"roundPhase"`
@@ -79,6 +88,7 @@ type RoomState struct {
 	CoopScore         int                    `json:"coopScore"`
 	CoopBonusTurns    int                    `json:"coopBonusTurns"`
 	PreviousTurn      *TurnSummaryModel      `json:"previousTurn"`
+	PreviousGameResult *PreviousGameResult   `json:"previousGameResult"`
 	DeckLanguage      string                 `json:"deckLanguage"`
 	Wordpack          string                 `json:"wordpack"`
 	CreatorID         string                 `json:"creatorId"`
@@ -134,6 +144,7 @@ func InitialRoomState(deckLanguage string) RoomState {
 		CoopScore:         0,
 		CoopBonusTurns:    0,
 		PreviousTurn:      nil,
+		PreviousGameResult: nil,
 		DeckLanguage:      deckLanguage,
 		Wordpack:          wordpack,
 		CreatorID:         "",

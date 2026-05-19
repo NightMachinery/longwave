@@ -5,6 +5,7 @@ import { CenteredColumn, CenteredRow } from "../common/LayoutElements";
 import { LongwaveAppTitle } from "../common/Title";
 import { Button } from "../common/Button";
 import { useTranslation } from "react-i18next";
+import { PreviousGameResultBanner } from "./PreviousGameResult";
 
 export function ReadyLobby() {
   const { t } = useTranslation();
@@ -20,6 +21,7 @@ export function ReadyLobby() {
   return (
     <CenteredColumn>
       <LongwaveAppTitle />
+      <PreviousGameResultBanner />
       <div style={{ marginBottom: 8 }}>{t("readylobby.mode_ready", "Mode ready")}</div>
       <div style={{ fontWeight: 700, marginBottom: 16 }}>{modeLabel}</div>
       {!gameState.viewer.canManageRoom && (

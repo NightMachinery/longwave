@@ -71,6 +71,15 @@ export type TurnSummaryModel = {
   guess: number;
 };
 
+export type PreviousGameResult = {
+  gameType: GameType;
+  winnerTeam: Team;
+  loserTeam: Team;
+  leftScore: number;
+  rightScore: number;
+  coopScore: number;
+};
+
 export type ViewerState = {
   playerId: string;
   canManageRoom: boolean;
@@ -106,11 +115,13 @@ export interface GameState {
   coopScore: number;
   coopBonusTurns: number;
   previousTurn: TurnSummaryModel | null;
+  previousGameResult: PreviousGameResult | null;
   deckLanguage: string | null;
   wordpack: string;
   creatorId: string;
   psychicCount: number;
   clueQuota: number;
+  randomizeTeams: boolean;
   viewer: ViewerState;
 }
 
@@ -134,11 +145,13 @@ export function InitialGameState(deckLanguage: string = "en"): GameState {
     coopScore: 0,
     coopBonusTurns: 0,
     previousTurn: null,
+    previousGameResult: null,
     deckLanguage,
     wordpack: normalizeWordpack(deckLanguage),
     creatorId: "",
     psychicCount: 1,
     clueQuota: 1,
+    randomizeTeams: true,
     viewer: {
       playerId: "",
       canManageRoom: false,

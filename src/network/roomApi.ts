@@ -175,6 +175,8 @@ export function normalizeGameStatePayload(gameState: Partial<GameState>): GameSt
             ...gameState.previousTurn,
             clues: gameState.previousTurn.clues ?? [],
           },
+    previousGameResult: gameState.previousGameResult ?? null,
+    randomizeTeams: gameState.randomizeTeams ?? initialState.randomizeTeams,
     viewer: {
       ...initialState.viewer,
       ...gameState.viewer,
