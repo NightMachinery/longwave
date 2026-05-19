@@ -83,3 +83,36 @@ func TestUnavailableRepresentativeCreatesSingleTemporarySubmitter(t *testing.T) 
 		t.Fatalf("expected fallback player to be marked as temporary representative")
 	}
 }
+
+func TestTemporaryRepresentativeUpdatesWhenRepresentativeObservesAndRejoins(t *testing.T) {
+	t.Parallel()
+
+	room := InitialRoomState("en")
+	room.GameType = GameTypeTeams
+	room.RoundPhase = RoundPhaseMakeGuess
+	room.ActingTeam = TeamLeft
+	room.Players = map[string]PlayerState{
+		"alice": {Name: "Alice", Team: TeamLeft, IsRepresentative: true},
+		"bob":   {Name: "Bob", Team: TeamLeft},
+		"carol": {Name: "Carol", Team: TeamLeft},
+	}
+
+	if viewerTemporaryRep(&room, "bob") {
+		t.Fatalf("expected no temporary rep while explicit representative is active")
+	}
+
+	alice := room.Players["alice"]
+	alice.IsObserver = true
+	room.Players["alice"] = alice
+
+	if !viewerTemporaryRep(&room, "bob") {
+		t.Fatalf("expected bob to become temporary rep after representative observes")
+	}
+
+	alice.IsObserver = false
+	room.Players["alice"] = alice
+
+	if viewerTemporaryRep(&room, "bob") {
+		t.Fatalf("expected temporary rep to clear when representative rejoins")
+	}
+}
