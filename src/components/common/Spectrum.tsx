@@ -34,6 +34,7 @@ export function Spectrum(props: {
     width: 18,
     backgroundColor: "rgba(255,255,255,0.8)",
     borderColor: "black",
+    zIndex: 3,
   };
 
   const dotStyle = {
@@ -66,16 +67,8 @@ export function Spectrum(props: {
 
   if (props.psychicTargetValue !== undefined) {
     marks[props.psychicTargetValue] = {
-      style: {
-        fontWeight: "bold",
-        color: "#7c2d12",
-        cursor: "auto",
-        backgroundColor: "#ffedd5",
-        border: "1px solid #fdba74",
-        borderRadius: 999,
-        padding: "2px 6px",
-      },
-      label: t("spectrum.psychic_target", "True target"),
+      style: { cursor: "auto" },
+      label: "",
     };
   }
 
@@ -103,22 +96,43 @@ export function Spectrum(props: {
           </div>
         </CenteredRow>
         <div style={{ padding: "16px 32px" }}>
-          <Slider
-            min={0}
-            max={20}
-            value={props.handleValue}
-            trackStyle={{
-              backgroundColor: "transparent",
-            }}
-            railStyle={{
-              background: `linear-gradient(90deg, ${primaryColor} 0%, ${secondaryColor} 100%)`,
-              height: 8,
-            }}
-            handleStyle={handleStyle}
-            onChange={props.onChange}
-            marks={marks}
-            dotStyle={dotStyle}
-          />
+          <div style={{ position: "relative" }}>
+            {props.psychicTargetValue !== undefined && (
+              <div
+                aria-hidden="true"
+                style={{
+                  position: "absolute",
+                  left: `${(props.psychicTargetValue / 20) * 100}%`,
+                  top: -6,
+                  width: 26,
+                  height: 26,
+                  borderRadius: "50%",
+                  transform: "translateX(-13px)",
+                  backgroundColor: "#7c2d12",
+                  border: "3px solid #ffedd5",
+                  boxShadow: "0 0 0 1px #fdba74",
+                  zIndex: 1,
+                  pointerEvents: "none",
+                }}
+              />
+            )}
+            <Slider
+              min={0}
+              max={20}
+              value={props.handleValue}
+              trackStyle={{
+                backgroundColor: "transparent",
+              }}
+              railStyle={{
+                background: `linear-gradient(90deg, ${primaryColor} 0%, ${secondaryColor} 100%)`,
+                height: 8,
+              }}
+              handleStyle={handleStyle}
+              onChange={props.onChange}
+              marks={marks}
+              dotStyle={dotStyle}
+            />
+          </div>
         </div>
       </CenteredColumn>
     </div>
