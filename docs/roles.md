@@ -7,7 +7,7 @@ Longwave now supports server-enforced room roles and filtered hidden information
 - **Moderator**
   - The first player to join a room becomes the creator and a moderator.
   - Creator status is permanent for that room.
-  - Moderators can change mode, start team games, reset the room, change psychic/clue settings, promote or demote moderators, mark representatives, move players into or out of observer mode, and force-assign players to either team.
+  - Moderators can change mode, start team games, reset the room, change psychic/clue/team-randomization settings, promote or demote moderators, mark representatives, move players into or out of observer mode, and force-assign non-psychic players to either team.
   - Moderators can also manage their own representative, observer, and team state from the player-management UI.
 - **Representative**
   - Representatives are optional.
@@ -17,6 +17,7 @@ Longwave now supports server-enforced room roles and filtered hidden information
 - **Observer**
   - Observers stay in the room but are removed from active play.
   - They keep their stored team, moderator, and representative flags while observing.
+  - Observers can rejoin active play by themselves.
   - Moderators retain moderator powers even while observing.
 - **Psychic**
   - Psychics are chosen from the eligible active player pool, preferring players who have been psychic the fewest times in the current game and randomizing only within ties.
@@ -51,6 +52,6 @@ Room access now uses a room-scoped server session cookie instead of the older `r
 - **Copy room link** shares the clean room URL.
 - **Migrate device** asks the server for a one-time migration link.
 - Opening that migration link on another device transfers the same in-room identity there.
-- **Reroll prompt** is available to moderators during clueing before any clue is submitted; it draws a new spectrum prompt/target while keeping the current psychics.
-- **Play Again** resets the current game while preserving the room, creator, player list, and room settings.
+- **Reroll prompt** is available to moderators and current psychics during clueing before any clue is submitted; it draws a new spectrum prompt/target while keeping the current psychics.
+- **Play Again** resets the current game while preserving the room, creator, player list, room settings, and a summary of the previous winner/score.
 - **Reset Room ID** rotates the join code so the old public link stops accepting new joins.

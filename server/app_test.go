@@ -639,7 +639,7 @@ func TestOnlyModeratorsCanStartTeamGameAndAssignTeams(t *testing.T) {
 		t.Fatalf("expected alice join to return 200, got %d", aliceJoin.StatusCode)
 	}
 	aliceCookie := aliceJoin.Cookies()[0]
-	_ = decodeBody[RoomView](t, aliceJoin.Body)
+	aliceBody := decodeBody[RoomView](t, aliceJoin.Body)
 
 	bobJoin := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/join", map[string]any{
 		"playerName": "Bob",
@@ -704,7 +704,7 @@ func TestOnlyModeratorsCanStartTeamGameAndAssignTeams(t *testing.T) {
 	if startedBody.RoundPhase != RoundPhaseGiveClue {
 		t.Fatalf("expected started game to enter clue phase, got %v", startedBody.RoundPhase)
 	}
-	if startedBody.ActingTeam != TeamLeft {
+	if startedBody.ActingTeam != startedBody.Players[aliceBody.Viewer.PlayerID].Team {
 		t.Fatalf("expected acting team to match moderator starter team, got %v", startedBody.ActingTeam)
 	}
 }

@@ -96,9 +96,9 @@ func applyAction(room *RoomState, viewerID string, action ActionRequest, wordpac
 		}
 		room.GameType = GameType(*action.GameType)
 		room.PsychicPickCounts = map[string]int{}
+		room.PreviousGameResult = nil
 		if room.GameType == GameTypeTeams {
-			room.RoundPhase = RoundPhasePickTeams
-			room.ActingTeam = TeamUnset
+			enterTeamSetup(room)
 		} else {
 			resetScoresForGameType(room)
 			return startRound(room, viewerID)
@@ -140,6 +140,7 @@ func applyAction(room *RoomState, viewerID string, action ActionRequest, wordpac
 		}
 		player.Team = team
 		room.Players[action.PlayerID] = player
+		room.TeamsRandomized = true
 		return nil
 	case "set_psychic_count":
 		if !canManageRoom(room, viewerID) || action.PsychicCount == nil {
@@ -162,6 +163,21 @@ func applyAction(room *RoomState, viewerID string, action ActionRequest, wordpac
 			room.ClueQuota = *action.ClueQuota
 		}
 		normalizeRoundState(room)
+		return nil
+	case "set_randomize_teams":
+		if !canManageRoom(room, viewerID) || action.Value == nil {
+			return errUnauthorized
+		}
+		room.RandomizeTeams = boolPointer(*action.Value)
+		return nil
+	case "randomize_teams":
+		if !canManageRoom(room, viewerID) {
+			return errUnauthorized
+		}
+		if room.GameType != GameTypeTeams || room.RoundPhase != RoundPhasePickTeams {
+			return fmt.Errorf("teams can only be randomized during team setup")
+		}
+		randomizeTeamAssignments(room)
 		return nil
 	case "submit_clue":
 		return submitClue(room, viewerID, action.Clue)
@@ -259,6 +275,7 @@ func applyAction(room *RoomState, viewerID string, action ActionRequest, wordpac
 		creatorID := room.CreatorID
 		psychicCount := room.PsychicCount
 		clueQuota := room.ClueQuota
+		randomizeTeams := room.RandomizeTeams
 		deckLanguage := room.DeckLanguage
 		wordpack := room.Wordpack
 		*room = InitialRoomState(deckLanguage)
@@ -267,6 +284,7 @@ func applyAction(room *RoomState, viewerID string, action ActionRequest, wordpac
 		room.CreatorID = creatorID
 		room.PsychicCount = psychicCount
 		room.ClueQuota = clueQuota
+		room.RandomizeTeams = randomizeTeams
 		room.PsychicPickCounts = map[string]int{}
 		return nil
 	case "play_again":
@@ -500,6 +518,7 @@ func resetScoresForGameType(room *RoomState) {
 	room.TurnsTaken = -1
 	room.DeckIndex = 0
 	room.ActingTeam = TeamUnset
+	room.TeamsRandomized = false
 }
 
 func playAgainRoom(room *RoomState) {
@@ -518,9 +537,9 @@ func playAgainRoom(room *RoomState) {
 	room.SpectrumTarget = randomSpectrumTarget()
 	room.PsychicPickCounts = map[string]int{}
 	room.MigrationTokens = map[string]string{}
+	room.TeamsRandomized = false
 	if room.GameType == GameTypeTeams {
-		room.RoundPhase = RoundPhasePickTeams
-		room.ActingTeam = TeamUnset
+		enterTeamSetup(room)
 		return
 	}
 	room.RoundPhase = RoundPhaseReady
@@ -548,6 +567,33 @@ func previousGameResult(room *RoomState) *PreviousGameResult {
 	return result
 }
 
+func enterTeamSetup(room *RoomState) {
+	room.RoundPhase = RoundPhasePickTeams
+	room.ActingTeam = TeamUnset
+	room.Clues = []Clue{}
+	room.PsychicIDs = []string{}
+	if room.RandomizeTeams != nil && *room.RandomizeTeams && !room.TeamsRandomized {
+		randomizeTeamAssignments(room)
+	}
+}
+
+func randomizeTeamAssignments(room *RoomState) {
+	playerIDs := activePlayerIDs(room)
+	rng := mathrand.New(mathrand.NewSource(timeSeed()))
+	rng.Shuffle(len(playerIDs), func(i, j int) {
+		playerIDs[i], playerIDs[j] = playerIDs[j], playerIDs[i]
+	})
+	for index, playerID := range playerIDs {
+		player := room.Players[playerID]
+		if index%2 == 0 {
+			player.Team = TeamLeft
+		} else {
+			player.Team = TeamRight
+		}
+		room.Players[playerID] = player
+	}
+	room.TeamsRandomized = true
+}
 
 func rerollRound(room *RoomState) error {
 	if room.RoundPhase != RoundPhaseGiveClue {

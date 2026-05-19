@@ -116,3 +116,138 @@ func TestTemporaryRepresentativeUpdatesWhenRepresentativeObservesAndRejoins(t *t
 		t.Fatalf("expected temporary rep to clear when representative rejoins")
 	}
 }
+
+func TestRandomizeTeamAssignmentsBalancesActivePlayers(t *testing.T) {
+	t.Parallel()
+
+	room := InitialRoomState("en")
+	room.Players = map[string]PlayerState{
+		"alice": {Name: "Alice"},
+		"bob":   {Name: "Bob"},
+		"carol": {Name: "Carol"},
+		"dana":  {Name: "Dana"},
+		"erin":  {Name: "Erin", IsObserver: true},
+	}
+
+	randomizeTeamAssignments(&room)
+
+	leftCount := 0
+	rightCount := 0
+	for _, player := range room.Players {
+		if player.IsObserver {
+			if player.Team != TeamUnset {
+				t.Fatalf("expected observer to remain unassigned, got %v", player.Team)
+			}
+			continue
+		}
+		if player.Team == TeamLeft {
+			leftCount++
+		}
+		if player.Team == TeamRight {
+			rightCount++
+		}
+	}
+	if leftCount != 2 || rightCount != 2 {
+		t.Fatalf("expected balanced team counts, got left=%d right=%d", leftCount, rightCount)
+	}
+}
+
+func TestEnterTeamSetupHonorsRandomizeTeamsSetting(t *testing.T) {
+	t.Parallel()
+
+	room := InitialRoomState("en")
+	disabled := false
+	room.RandomizeTeams = &disabled
+	room.Players = map[string]PlayerState{
+		"alice": {Name: "Alice"},
+		"bob":   {Name: "Bob"},
+	}
+
+	enterTeamSetup(&room)
+
+	if room.Players["alice"].Team != TeamUnset || room.Players["bob"].Team != TeamUnset {
+		t.Fatalf("expected disabled auto-randomization to preserve team assignments")
+	}
+	if room.TeamsRandomized {
+		t.Fatalf("expected disabled auto-randomization not to mark teams randomized")
+	}
+}
+
+func TestPsychicCanRerollBeforeAnyClue(t *testing.T) {
+	t.Parallel()
+
+	room := InitialRoomState("en")
+	room.RoundPhase = RoundPhaseGiveClue
+	room.PsychicIDs = []string{"bob"}
+	room.Players = map[string]PlayerState{
+		"alice": {Name: "Alice", IsModerator: true},
+		"bob":   {Name: "Bob"},
+	}
+	initialDeckIndex := room.DeckIndex
+
+	if err := applyAction(&room, "bob", ActionRequest{Type: "reroll_round"}, nil); err != nil {
+		t.Fatalf("expected psychic reroll to succeed: %v", err)
+	}
+	if room.DeckIndex != initialDeckIndex+1 {
+		t.Fatalf("expected deck index to advance, got %d", room.DeckIndex)
+	}
+
+	room.Clues = []Clue{{AuthorID: "bob", AuthorName: "Bob", Text: "coffee"}}
+	if err := applyAction(&room, "bob", ActionRequest{Type: "reroll_round"}, nil); err == nil {
+		t.Fatalf("expected reroll after a clue to fail")
+	}
+}
+
+func TestModeratorCannotMoveCurrentPsychicTeam(t *testing.T) {
+	t.Parallel()
+
+	right := int(TeamRight)
+	room := InitialRoomState("en")
+	room.GameType = GameTypeTeams
+	room.RoundPhase = RoundPhaseGiveClue
+	room.ActingTeam = TeamLeft
+	room.PsychicIDs = []string{"bob"}
+	room.Players = map[string]PlayerState{
+		"alice": {Name: "Alice", Team: TeamLeft, IsModerator: true},
+		"bob":   {Name: "Bob", Team: TeamLeft},
+		"carol": {Name: "Carol", Team: TeamLeft},
+	}
+
+	if err := applyAction(&room, "alice", ActionRequest{Type: "set_team", PlayerID: "bob", Team: &right}, nil); err == nil {
+		t.Fatalf("expected moving a current psychic to fail")
+	}
+	if err := applyAction(&room, "alice", ActionRequest{Type: "set_team", PlayerID: "carol", Team: &right}, nil); err != nil {
+		t.Fatalf("expected moving a non-psychic to succeed: %v", err)
+	}
+	if room.Players["carol"].Team != TeamRight {
+		t.Fatalf("expected carol to move to right team, got %v", room.Players["carol"].Team)
+	}
+}
+
+func TestPlayAgainStoresPreviousWinnerResult(t *testing.T) {
+	t.Parallel()
+
+	room := InitialRoomState("en")
+	room.GameType = GameTypeTeams
+	room.RoundPhase = RoundPhaseViewScore
+	room.CreatorID = "alice"
+	room.LeftScore = 10
+	room.RightScore = 7
+	room.Players = map[string]PlayerState{
+		"alice": {Name: "Alice", Team: TeamLeft, IsModerator: true},
+		"bob":   {Name: "Bob", Team: TeamRight},
+	}
+
+	if err := applyAction(&room, "alice", ActionRequest{Type: "play_again"}, nil); err != nil {
+		t.Fatalf("expected play again to succeed: %v", err)
+	}
+	if room.PreviousGameResult == nil {
+		t.Fatalf("expected previous game result to be preserved")
+	}
+	if room.PreviousGameResult.WinnerTeam != TeamLeft || room.PreviousGameResult.LoserTeam != TeamRight {
+		t.Fatalf("expected left winner/right loser, got %#v", room.PreviousGameResult)
+	}
+	if room.LeftScore != 0 || room.RightScore != 0 {
+		t.Fatalf("expected scores to reset, got left=%d right=%d", room.LeftScore, room.RightScore)
+	}
+}

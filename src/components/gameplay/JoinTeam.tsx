@@ -31,6 +31,26 @@ export function JoinTeam() {
     <CenteredColumn style={{ alignItems: "stretch", gap: 16 }}>
       <PreviousGameResultBanner />
       <SectionTitle>{t("jointeam.join_team")}:</SectionTitle>
+      {canManageRoom && gameState.roundPhase === RoundPhase.PickTeams && (
+        <CenteredRow style={{ justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 600 }}>
+            <input
+              type="checkbox"
+              checked={gameState.randomizeTeams}
+              onChange={(event) =>
+                submitAction({ type: "set_randomize_teams", value: event.target.checked })
+              }
+            />
+            {t("jointeam.randomize_assignments", "Randomize player assignments")}
+          </label>
+          <Button
+            text={t("jointeam.randomize_teams", "Randomize Teams")}
+            onClick={() => submitAction({ type: "randomize_teams" })}
+            variant="secondary"
+            style={{ alignSelf: "flex-start" }}
+          />
+        </CenteredRow>
+      )}
       <CenteredRow style={{ alignItems: "stretch", width: "100%", gap: 12, flexWrap: "wrap" }}>
         <TeamPane
           title={TeamName(Team.Left, t)}

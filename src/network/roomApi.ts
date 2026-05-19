@@ -10,6 +10,8 @@ export type RoomAction =
   | { type: "start_round" }
   | { type: "set_psychic_count"; psychicCount: number }
   | { type: "set_clue_quota"; clueQuota: number }
+  | { type: "set_randomize_teams"; value: boolean }
+  | { type: "randomize_teams" }
   | { type: "submit_clue"; clue: string }
   | { type: "set_guess"; guess: number }
   | { type: "submit_guess" }

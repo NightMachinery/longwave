@@ -52,6 +52,7 @@ describe("RoomMenu", () => {
               ...InitialGameState("en").viewer,
               playerId: "player-id",
               canManageRoom: true,
+              canRerollRound: true,
             },
             players: {
               "player-id": {
@@ -131,6 +132,7 @@ describe("RoomMenu", () => {
               ...InitialGameState("en").viewer,
               playerId: "player-id",
               canManageRoom: true,
+              canRerollRound: true,
             },
             players: {
               "player-id": {
@@ -193,6 +195,7 @@ describe("RoomMenu", () => {
               ...InitialGameState("en").viewer,
               playerId: "player-id",
               canManageRoom: true,
+              canRerollRound: true,
             },
             players: {
               "player-id": {

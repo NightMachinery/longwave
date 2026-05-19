@@ -35,4 +35,6 @@ Standard mode is the classic competitive Longwave flow.
 ## Moderator controls
 
 - Only moderators may press **Start Game** during team setup.
-- Moderators may force-assign any joined player to LEFT BRAIN or RIGHT BRAIN before or during team-mode play.
+- Team setup has a default-enabled random assignment option. It randomizes active players once when entering setup and keeps team counts balanced.
+- Moderators may press **Randomize Teams** during team setup, then manually adjust assignments.
+- Moderators may force-assign any non-psychic joined player to LEFT BRAIN or RIGHT BRAIN before or during team-mode play.

@@ -44,6 +44,46 @@ test("dispatches join_team when selecting a team", async () => {
   });
 });
 
+test("shows randomize team controls for moderators during team setup", async () => {
+  const submitAction = jest.fn();
+  const component = render(
+    <TestContext
+      gameState={{
+        ...InitialGameState(),
+        gameType: GameType.Teams,
+        roundPhase: RoundPhase.PickTeams,
+        randomizeTeams: true,
+        viewer: {
+          ...InitialGameState().viewer,
+          canManageRoom: true,
+        },
+        players: {
+          mod1: {
+            name: "Mod",
+            team: Team.Left,
+            isModerator: true,
+            isRepresentative: false,
+            isObserver: false,
+          },
+        },
+      }}
+      playerId="mod1"
+      submitAction={submitAction}
+    >
+      <JoinTeam />
+    </TestContext>
+  );
+
+  fireEvent.click(component.getByRole("checkbox", { name: "Randomize player assignments" }));
+  expect(submitAction).toHaveBeenCalledWith({
+    type: "set_randomize_teams",
+    value: false,
+  });
+
+  fireEvent.click(component.getByRole("button", { name: "Randomize Teams" }));
+  expect(submitAction).toHaveBeenCalledWith({ type: "randomize_teams" });
+});
+
 test("shows previous game result during team setup", () => {
   const component = render(
     <TestContext
