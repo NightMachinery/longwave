@@ -282,6 +282,62 @@ func TestCreatorCanSelfManageRepresentativeAndObserverButNotDemoteModerator(t *t
 	}
 }
 
+func TestObserverCanRejoinThemself(t *testing.T) {
+	t.Parallel()
+
+	testServer := newTestHTTPServer(t)
+	defer testServer.Close()
+
+	aliceJoin := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/join", map[string]any{
+		"playerName": "Alice",
+	})
+	if aliceJoin.StatusCode != http.StatusOK {
+		t.Fatalf("expected alice join to return 200, got %d", aliceJoin.StatusCode)
+	}
+	aliceCookie := aliceJoin.Cookies()[0]
+
+	bobJoin := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/join", map[string]any{
+		"playerName": "Bob",
+	})
+	if bobJoin.StatusCode != http.StatusOK {
+		t.Fatalf("expected bob join to return 200, got %d", bobJoin.StatusCode)
+	}
+	bobCookie := bobJoin.Cookies()[0]
+	bobBody := decodeBody[RoomView](t, bobJoin.Body)
+
+	setObserver := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/actions", map[string]any{
+		"type":     "set_observer",
+		"playerId": bobBody.Viewer.PlayerID,
+		"value":    true,
+	}, aliceCookie)
+	if setObserver.StatusCode != http.StatusOK {
+		t.Fatalf("expected moderator observer update to return 200, got %d", setObserver.StatusCode)
+	}
+
+	rejoin := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/actions", map[string]any{
+		"type":     "set_observer",
+		"playerId": bobBody.Viewer.PlayerID,
+		"value":    false,
+	}, bobCookie)
+	if rejoin.StatusCode != http.StatusOK {
+		t.Fatalf("expected observer self-rejoin to return 200, got %d", rejoin.StatusCode)
+	}
+	rejoinBody := decodeBody[RoomView](t, rejoin.Body)
+	if rejoinBody.Players[bobBody.Viewer.PlayerID].IsObserver {
+		t.Fatalf("expected bob to rejoin active players")
+	}
+
+	aliceBody := decodeBody[RoomView](t, aliceJoin.Body)
+	bobSetAliceObserver := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/actions", map[string]any{
+		"type":     "set_observer",
+		"playerId": aliceBody.Viewer.PlayerID,
+		"value":    true,
+	}, bobCookie)
+	if bobSetAliceObserver.StatusCode != http.StatusForbidden {
+		t.Fatalf("expected non-moderator observer update for another player to return 403, got %d", bobSetAliceObserver.StatusCode)
+	}
+}
+
 func TestPlayAgainPreservesModeSettingsAndPlayers(t *testing.T) {
 	t.Parallel()
 

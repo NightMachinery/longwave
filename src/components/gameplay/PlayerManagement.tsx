@@ -36,6 +36,7 @@ export function PlayerManagementCard(props: {
   const isLocalPlayer = props.playerId === localPlayer.id;
   const isCreator = props.playerId === gameState.creatorId;
   const canManageRoom = gameState.viewer.canManageRoom;
+  const canSelfRejoin = isLocalPlayer && player?.isObserver;
 
   if (!player) {
     return null;
@@ -130,24 +131,26 @@ export function PlayerManagementCard(props: {
         </div>
       )}
 
-      {canManageRoom && (
+      {(canManageRoom || canSelfRejoin) && (
         <div style={{ marginTop: 12, display: "flex", gap: 6, flexWrap: "wrap" }}>
-          <Button
-            text={
-              player.isRepresentative
-                ? t("playercard.remove_rep", "Remove rep")
-                : t("playercard.make_rep", "Make rep")
-            }
-            compact
-            variant={player.isRepresentative ? "selected" : "secondary"}
-            onClick={() =>
-              props.submitAction({
-                type: "set_representative",
-                playerId: props.playerId,
-                value: !player.isRepresentative,
-              })
-            }
-          />
+          {canManageRoom && (
+            <Button
+              text={
+                player.isRepresentative
+                  ? t("playercard.remove_rep", "Remove rep")
+                  : t("playercard.make_rep", "Make rep")
+              }
+              compact
+              variant={player.isRepresentative ? "selected" : "secondary"}
+              onClick={() =>
+                props.submitAction({
+                  type: "set_representative",
+                  playerId: props.playerId,
+                  value: !player.isRepresentative,
+                })
+              }
+            />
+          )}
           <Button
             text={
               player.isObserver
@@ -163,6 +166,7 @@ export function PlayerManagementCard(props: {
                 value: !player.isObserver,
               })
             }
+            disabled={!canManageRoom && !canSelfRejoin}
           />
           {!isLocalPlayer && (
             <Button

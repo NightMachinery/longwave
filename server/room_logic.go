@@ -230,12 +230,19 @@ func applyAction(room *RoomState, viewerID string, action ActionRequest, wordpac
 			p.IsRepresentative = v
 		}, false)
 	case "set_observer":
-		if !canManageRoom(room, viewerID) || action.PlayerID == "" || action.Value == nil {
+		if action.PlayerID == "" || action.Value == nil {
+			return errUnauthorized
+		}
+		isSelfRejoin := action.PlayerID == viewerID && !*action.Value
+		if !canManageRoom(room, viewerID) && !isSelfRejoin {
 			return errUnauthorized
 		}
 		player, ok := room.Players[action.PlayerID]
 		if !ok {
 			return fmt.Errorf("player not found")
+		}
+		if isSelfRejoin && !player.IsObserver {
+			return fmt.Errorf("player is not observing")
 		}
 		player.IsObserver = *action.Value
 		room.Players[action.PlayerID] = player

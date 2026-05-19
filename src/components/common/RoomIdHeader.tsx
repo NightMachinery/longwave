@@ -7,6 +7,7 @@ import {
   faShuffle,
   faUserEdit,
   faUserPlus,
+  faUserCheck,
   faWandMagicSparkles,
   faSliders,
 } from "@fortawesome/free-solid-svg-icons";
@@ -143,7 +144,7 @@ export function RoomMenu(props: {
   showNotice: (notice: Notice) => void;
 }) {
   const { t } = useTranslation();
-  const { gameState, openNameEditor, submitAction } = useContext(GameModelContext);
+  const { gameState, localPlayer, openNameEditor, submitAction } = useContext(GameModelContext);
   const [isEditingGameSettings, setIsEditingGameSettings] = useState(false);
 
   const menuItemProps = {
@@ -153,7 +154,7 @@ export function RoomMenu(props: {
 
 
   const canRerollPrompt =
-    gameState.viewer.canManageRoom &&
+    gameState.viewer.canRerollRound &&
     gameState.roundPhase === RoundPhase.GiveClue &&
     gameState.clues.length === 0;
 
@@ -202,11 +203,23 @@ export function RoomMenu(props: {
           <div {...menuItemProps} onClick={() => submitAction({ type: "play_again" })}>
             <FontAwesomeIcon icon={faArrowsRotate} /> {t("roomidheader.play_again")}
           </div>
-          {canRerollPrompt && (
-            <div {...menuItemProps} onClick={() => submitAction({ type: "reroll_round" })}>
-              <FontAwesomeIcon icon={faShuffle} /> {t("roomidheader.reroll_prompt")}
-            </div>
-          )}
+        </>
+      )}
+      {canRerollPrompt && (
+        <div {...menuItemProps} onClick={() => submitAction({ type: "reroll_round" })}>
+          <FontAwesomeIcon icon={faShuffle} /> {t("roomidheader.reroll_prompt")}
+        </div>
+      )}
+      {localPlayer.isObserver && (
+        <div
+          {...menuItemProps}
+          onClick={() => submitAction({ type: "set_observer", playerId: localPlayer.id, value: false })}
+        >
+          <FontAwesomeIcon icon={faUserCheck} /> {t("playercard.rejoin", "Rejoin")}
+        </div>
+      )}
+      {gameState.viewer.canManageRoom && (
+        <>
           <div {...menuItemProps} onClick={() => submitAction({ type: "reset_room" })}>
             <FontAwesomeIcon icon={faRotateLeft} /> {t("roomidheader.reset_room")}
           </div>
