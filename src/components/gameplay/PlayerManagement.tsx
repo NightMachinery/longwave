@@ -37,6 +37,7 @@ export function PlayerManagementCard(props: {
   const isCreator = props.playerId === gameState.creatorId;
   const canManageRoom = gameState.viewer.canManageRoom;
   const canSelfRejoin = isLocalPlayer && player?.isObserver;
+  const isCurrentPsychic = gameState.psychicIds.includes(props.playerId);
 
   if (!player) {
     return null;
@@ -55,8 +56,9 @@ export function PlayerManagementCard(props: {
   ].filter((value): value is string => Boolean(value));
 
   const showTeamSelector =
-    props.showTeamSelector &&
+    (props.showTeamSelector || canManageRoom) &&
     gameState.gameType === GameType.Teams &&
+    !isCurrentPsychic &&
     (!player.isObserver || canManageRoom);
 
   return (

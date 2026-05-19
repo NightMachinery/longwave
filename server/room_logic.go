@@ -135,6 +135,9 @@ func applyAction(room *RoomState, viewerID string, action ActionRequest, wordpac
 		if !ok {
 			return fmt.Errorf("player not found")
 		}
+		if isPsychic(room, action.PlayerID) {
+			return fmt.Errorf("current psychics cannot change teams")
+		}
 		player.Team = team
 		room.Players[action.PlayerID] = player
 		return nil

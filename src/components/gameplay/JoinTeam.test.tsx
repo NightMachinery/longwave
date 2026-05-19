@@ -176,3 +176,103 @@ test("allows moderators to manage themselves without showing self moderator cont
     })
   ).toBeNull();
 });
+
+test("allows observer players to rejoin themselves", async () => {
+  const submitAction = jest.fn();
+  const component = render(
+    <TestContext
+      gameState={{
+        ...InitialGameState(),
+        players: {
+          player1: {
+            name: "Player",
+            team: Team.Left,
+            isModerator: false,
+            isRepresentative: false,
+            isObserver: true,
+          },
+        },
+      }}
+      playerId="player1"
+      submitAction={submitAction}
+    >
+      <PlayerManagementCard playerId="player1" submitAction={submitAction} />
+    </TestContext>
+  );
+
+  fireEvent.click(
+    within(component.getByTestId("player-card-player1")).getByRole("button", {
+      name: "Rejoin",
+    })
+  );
+
+  expect(submitAction).toHaveBeenCalledWith({
+    type: "set_observer",
+    playerId: "player1",
+    value: false,
+  });
+});
+
+test("shows mid-game team controls for non-psychics but not current psychics", () => {
+  const submitAction = jest.fn();
+  const component = render(
+    <TestContext
+      gameState={{
+        ...InitialGameState(),
+        gameType: GameType.Teams,
+        roundPhase: RoundPhase.GiveClue,
+        psychicIds: ["psychic1"],
+        viewer: {
+          ...InitialGameState().viewer,
+          canManageRoom: true,
+        },
+        players: {
+          mod1: {
+            name: "Mod",
+            team: Team.Left,
+            isModerator: true,
+            isRepresentative: false,
+            isObserver: false,
+          },
+          player2: {
+            name: "Player Two",
+            team: Team.Left,
+            isModerator: false,
+            isRepresentative: false,
+            isObserver: false,
+          },
+          psychic1: {
+            name: "Psychic",
+            team: Team.Left,
+            isModerator: false,
+            isRepresentative: false,
+            isObserver: false,
+          },
+        },
+      }}
+      playerId="mod1"
+      submitAction={submitAction}
+    >
+      <>
+        <PlayerManagementCard playerId="player2" submitAction={submitAction} />
+        <PlayerManagementCard playerId="psychic1" submitAction={submitAction} />
+      </>
+    </TestContext>
+  );
+
+  fireEvent.click(
+    within(component.getByTestId("player-card-player2")).getByRole("button", {
+      name: "RIGHT BRAIN",
+    })
+  );
+  expect(submitAction).toHaveBeenCalledWith({
+    type: "set_team",
+    playerId: "player2",
+    team: Team.Right,
+  });
+  expect(
+    within(component.getByTestId("player-card-psychic1")).queryByRole("button", {
+      name: "RIGHT BRAIN",
+    })
+  ).toBeNull();
+});
