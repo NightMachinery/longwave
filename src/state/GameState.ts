@@ -80,6 +80,7 @@ export type ViewerState = {
   canSubmitClue: boolean;
   canStartRound: boolean;
   canChangeTeam: boolean;
+  canRerollRound: boolean;
   effectiveClueQuota: number;
   submittedClueCount: number;
   isCurrentPsychic: boolean;
@@ -147,6 +148,7 @@ export function InitialGameState(deckLanguage: string = "en"): GameState {
       canSubmitClue: false,
       canStartRound: false,
       canChangeTeam: false,
+      canRerollRound: false,
       effectiveClueQuota: 1,
       submittedClueCount: 0,
       isCurrentPsychic: false,

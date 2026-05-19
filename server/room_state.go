@@ -98,6 +98,7 @@ type ViewerState struct {
 	CanSubmitClue         bool   `json:"canSubmitClue"`
 	CanStartRound         bool   `json:"canStartRound"`
 	CanChangeTeam         bool   `json:"canChangeTeam"`
+	CanRerollRound        bool   `json:"canRerollRound"`
 	EffectiveClueQuota    int    `json:"effectiveClueQuota"`
 	SubmittedClueCount    int    `json:"submittedClueCount"`
 	IsCurrentPsychic      bool   `json:"isCurrentPsychic"`

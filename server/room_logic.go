@@ -266,7 +266,7 @@ func applyAction(room *RoomState, viewerID string, action ActionRequest, wordpac
 		playAgainRoom(room)
 		return nil
 	case "reroll_round":
-		if !canManageRoom(room, viewerID) {
+		if !canManageRoom(room, viewerID) && !isPsychic(room, viewerID) {
 			return errUnauthorized
 		}
 		return rerollRound(room)
@@ -529,6 +529,13 @@ func rerollRound(room *RoomState) error {
 	return nil
 }
 
+func viewerCanRerollRound(room *RoomState, viewerID string) bool {
+	if room.RoundPhase != RoundPhaseGiveClue || len(room.Clues) > 0 {
+		return false
+	}
+	return canManageRoom(room, viewerID) || isPsychic(room, viewerID)
+}
+
 func incrementPsychicPickCounts(room *RoomState, psychicIDs []string) {
 	if room.PsychicPickCounts == nil {
 		room.PsychicPickCounts = map[string]int{}
@@ -773,6 +780,7 @@ func sanitizeRoomForViewer(room RoomState, roomID string, viewerID string) RoomV
 		CanSubmitClue:         room.RoundPhase == RoundPhaseGiveClue && isPsychic(&room, viewerID) && len(room.Clues) < effectiveClueQuota(&room) && !playerHasSubmittedClue(room, viewerID),
 		CanStartRound:         canStartRound(&room, viewerID),
 		CanChangeTeam:         !viewerPlayer.IsObserver,
+		CanRerollRound:        viewerCanRerollRound(&room, viewerID),
 		EffectiveClueQuota:    effectiveClueQuota(&room),
 		SubmittedClueCount:    len(room.Clues),
 		IsCurrentPsychic:      isPsychic(&room, viewerID),
