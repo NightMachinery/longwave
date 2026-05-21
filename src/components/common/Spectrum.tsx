@@ -58,20 +58,6 @@ export function Spectrum(props: {
     [n: number]: { style: React.CSSProperties; label: string };
   } = {};
 
-  if (props.targetValue !== undefined) {
-    marks[props.targetValue] = {
-      style: { fontWeight: "bold", color: "black", cursor: "auto" },
-      label: t("spectrum.target"),
-    };
-  }
-
-  if (props.psychicTargetValue !== undefined) {
-    marks[props.psychicTargetValue] = {
-      style: { cursor: "auto" },
-      label: "",
-    };
-  }
-
   if (props.guessingValue !== undefined) {
     const existing = marks[props.guessingValue];
     marks[props.guessingValue] = {
@@ -97,41 +83,14 @@ export function Spectrum(props: {
         </CenteredRow>
         <div style={{ padding: "16px 32px" }}>
           <div style={{ position: "relative" }}>
+            {props.targetValue !== undefined && (
+              <TrueTargetMarker value={props.targetValue} label={t("spectrum.target")} />
+            )}
             {props.psychicTargetValue !== undefined && (
-              <>
-                <span
-                  style={{
-                    position: "absolute",
-                    width: 1,
-                    height: 1,
-                    padding: 0,
-                    margin: -1,
-                    overflow: "hidden",
-                    clip: "rect(0, 0, 0, 0)",
-                    whiteSpace: "nowrap",
-                    border: 0,
-                  }}
-                >
-                  {t("spectrum.psychic_target")}
-                </span>
-                <div
-                  aria-hidden="true"
-                  style={{
-                    position: "absolute",
-                    left: `${(props.psychicTargetValue / 20) * 100}%`,
-                    top: -6,
-                    width: 26,
-                    height: 26,
-                    borderRadius: "50%",
-                    transform: "translateX(-13px)",
-                    backgroundColor: "#7c2d12",
-                    border: "3px solid #ffedd5",
-                    boxShadow: "0 0 0 1px #fdba74",
-                    zIndex: 1,
-                    pointerEvents: "none",
-                  }}
-                />
-              </>
+              <TrueTargetMarker
+                value={props.psychicTargetValue}
+                label={t("spectrum.psychic_target")}
+              />
             )}
             <Slider
               min={0}
@@ -153,6 +112,49 @@ export function Spectrum(props: {
         </div>
       </CenteredColumn>
     </div>
+  );
+}
+
+function TrueTargetMarker(props: { value: number; label: string }) {
+  return (
+    <>
+      <span
+        style={{
+          position: "absolute",
+          width: 1,
+          height: 1,
+          padding: 0,
+          margin: -1,
+          overflow: "hidden",
+          clip: "rect(0, 0, 0, 0)",
+          whiteSpace: "nowrap",
+          border: 0,
+        }}
+      >
+        {props.label}
+      </span>
+      <div
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          left: `${(props.value / 20) * 100}%`,
+          top: -13,
+          width: 34,
+          height: 34,
+          borderRadius: "50%",
+          transform: "translateX(-17px)",
+          background:
+            "radial-gradient(circle at 32% 24%, rgba(255,255,255,0.85), rgba(255,255,255,0.28) 34%, rgba(255,255,255,0.1) 72%)",
+          border: "1px solid rgba(255,255,255,0.78)",
+          boxShadow:
+            "inset 0 1px 3px rgba(255,255,255,0.95), inset 0 -8px 16px rgba(255,255,255,0.16), 0 8px 18px rgba(17,24,39,0.18), 0 0 0 1px rgba(17,24,39,0.14)",
+          backdropFilter: "blur(8px) saturate(1.35)",
+          WebkitBackdropFilter: "blur(8px) saturate(1.35)",
+          zIndex: 1,
+          pointerEvents: "none",
+        }}
+      />
+    </>
   );
 }
 
