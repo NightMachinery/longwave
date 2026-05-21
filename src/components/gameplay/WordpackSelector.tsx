@@ -30,6 +30,13 @@ export function WordpackSelector(props: {
     props.submitAction({ type: "set_wordpacks", wordpacks: next });
   };
 
+  const selectOnlyWordpack = (wordpackId: string) => {
+    if (!props.canManageRoom) {
+      return;
+    }
+    props.submitAction({ type: "set_wordpacks", wordpacks: [wordpackId] });
+  };
+
   if (!props.canManageRoom) {
     return (
       <p style={{ margin: 8 }}>
@@ -66,6 +73,10 @@ export function WordpackSelector(props: {
             <label
               key={wordpack.id}
               style={{ display: "flex", alignItems: "center", gap: 8 }}
+              onDoubleClick={(event) => {
+                event.preventDefault();
+                selectOnlyWordpack(wordpack.id);
+              }}
             >
               <input
                 type="checkbox"

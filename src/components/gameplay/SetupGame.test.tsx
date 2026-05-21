@@ -61,6 +61,44 @@ describe("SetupGame", () => {
     });
   });
 
+  it("lets moderators double-click a wordpack to select only that wordpack", async () => {
+    const submitAction = jest.fn();
+    const component = render(
+      <TestContext
+        gameState={{
+          ...InitialGameState(),
+          wordpacks: ["English", "Persian"],
+          viewer: {
+            ...InitialGameState().viewer,
+            canManageRoom: true,
+          },
+          players: {
+            mod1: {
+              name: "Mod",
+              team: 0,
+              isModerator: true,
+              isRepresentative: false,
+              isObserver: false,
+            },
+          },
+        }}
+        playerId="mod1"
+        submitAction={submitAction}
+      >
+        <SetupGame />
+      </TestContext>
+    );
+
+    await waitFor(() => expect(mockedFetchWordpacks).toHaveBeenCalled());
+
+    fireEvent.doubleClick(component.getByText("Persian"));
+
+    expect(submitAction).toHaveBeenCalledWith({
+      type: "set_wordpacks",
+      wordpacks: ["Persian"],
+    });
+  });
+
   it("lets moderators choose Individual mode", async () => {
     const submitAction = jest.fn();
     const component = render(
