@@ -138,18 +138,18 @@ function TrueTargetMarker(props: { value: number; label: string }) {
         style={{
           position: "absolute",
           left: `${(props.value / 20) * 100}%`,
-          top: -13,
-          width: 34,
-          height: 34,
+          top: -9,
+          width: 26,
+          height: 26,
           borderRadius: "50%",
-          transform: "translateX(-17px)",
+          transform: "translateX(-13px)",
           background:
-            "radial-gradient(circle at 32% 24%, rgba(255,255,255,0.85), rgba(255,255,255,0.28) 34%, rgba(255,255,255,0.1) 72%)",
-          border: "1px solid rgba(255,255,255,0.78)",
+            "radial-gradient(circle at 34% 24%, rgba(255,255,255,0.92), rgba(255,255,255,0.42) 32%, rgba(255,255,255,0.16) 66%, rgba(255,255,255,0.08) 100%)",
+          border: "1px solid rgba(255,255,255,0.62)",
           boxShadow:
-            "inset 0 1px 3px rgba(255,255,255,0.95), inset 0 -8px 16px rgba(255,255,255,0.16), 0 8px 18px rgba(17,24,39,0.18), 0 0 0 1px rgba(17,24,39,0.14)",
-          backdropFilter: "blur(8px) saturate(1.35)",
-          WebkitBackdropFilter: "blur(8px) saturate(1.35)",
+            "inset 0 1px 2px rgba(255,255,255,0.92), inset 0 -7px 12px rgba(255,255,255,0.14), 0 5px 12px rgba(17,24,39,0.14), 0 0 0 1px rgba(17,24,39,0.08)",
+          backdropFilter: "blur(10px) saturate(1.45)",
+          WebkitBackdropFilter: "blur(10px) saturate(1.45)",
           zIndex: 1,
           pointerEvents: "none",
         }}
