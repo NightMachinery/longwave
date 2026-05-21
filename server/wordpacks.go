@@ -138,3 +138,23 @@ func normalizeWordpack(id string) string {
 	}
 	return id
 }
+
+func normalizeWordpackList(ids []string, fallback string) []string {
+	normalized := []string{}
+	seen := map[string]struct{}{}
+	for _, id := range ids {
+		wordpack := normalizeWordpack(id)
+		if wordpack == "" {
+			continue
+		}
+		if _, ok := seen[wordpack]; ok {
+			continue
+		}
+		seen[wordpack] = struct{}{}
+		normalized = append(normalized, wordpack)
+	}
+	if len(normalized) == 0 {
+		normalized = append(normalized, normalizeWordpack(fallback))
+	}
+	return normalized
+}

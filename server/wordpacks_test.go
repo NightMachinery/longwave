@@ -60,6 +60,7 @@ func TestNormalizeRoomStatePreservesExplicitEnglishWordpack(t *testing.T) {
 
 	room := InitialRoomState("de")
 	room.Wordpack = "English"
+	room.Wordpacks = nil
 	normalizeRoomStateShape(&room)
 	if room.Wordpack != "English" {
 		t.Fatalf("expected explicit English wordpack to be preserved, got %q", room.Wordpack)

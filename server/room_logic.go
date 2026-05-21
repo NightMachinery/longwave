@@ -32,18 +32,20 @@ func getScore(target int, guess int) int {
 }
 
 type ActionRequest struct {
-	Type         string `json:"type"`
-	PlayerID     string `json:"playerId,omitempty"`
-	Name         string `json:"name,omitempty"`
-	GameType     *int   `json:"gameType,omitempty"`
-	Team         *int   `json:"team,omitempty"`
-	PsychicCount *int   `json:"psychicCount,omitempty"`
-	ClueQuota    *int   `json:"clueQuota,omitempty"`
-	Guess        *int   `json:"guess,omitempty"`
-	CounterGuess string `json:"counterGuess,omitempty"`
-	Clue         string `json:"clue,omitempty"`
-	Value        *bool  `json:"value,omitempty"`
-	Wordpack     string `json:"wordpack,omitempty"`
+	Type               string   `json:"type"`
+	PlayerID           string   `json:"playerId,omitempty"`
+	Name               string   `json:"name,omitempty"`
+	GameType           *int     `json:"gameType,omitempty"`
+	Team               *int     `json:"team,omitempty"`
+	PsychicCount       *int     `json:"psychicCount,omitempty"`
+	ClueQuota          *int     `json:"clueQuota,omitempty"`
+	Guess              *int     `json:"guess,omitempty"`
+	CounterGuess       string   `json:"counterGuess,omitempty"`
+	Clue               string   `json:"clue,omitempty"`
+	Value              *bool    `json:"value,omitempty"`
+	Wordpack           string   `json:"wordpack,omitempty"`
+	Wordpacks          []string `json:"wordpacks,omitempty"`
+	PsychicRerollLimit *int     `json:"psychicRerollLimit,omitempty"`
 }
 
 func isTeamGameOver(room *RoomState) bool {
@@ -89,6 +91,29 @@ func applyAction(room *RoomState, viewerID string, action ActionRequest, wordpac
 			return fmt.Errorf("unknown wordpack %q", wordpack)
 		}
 		room.Wordpack = wordpack
+		room.Wordpacks = []string{wordpack}
+		return nil
+	case "set_wordpacks":
+		if !canManageRoom(room, viewerID) {
+			return errUnauthorized
+		}
+		if len(action.Wordpacks) == 0 {
+			return fmt.Errorf("wordpacks are required")
+		}
+		wordpacksList := normalizeWordpackList(action.Wordpacks, room.Wordpack)
+		if len(wordpacksList) == 0 {
+			return fmt.Errorf("wordpacks are required")
+		}
+		if wordpacks == nil {
+			wordpacks = NewWordpackCatalog(defaultWordpackDir)
+		}
+		for _, wordpack := range wordpacksList {
+			if !wordpacks.Exists(wordpack) {
+				return fmt.Errorf("unknown wordpack %q", wordpack)
+			}
+		}
+		room.Wordpacks = wordpacksList
+		room.Wordpack = wordpacksList[0]
 		return nil
 	case "set_game_type":
 		if !canManageRoom(room, viewerID) || action.GameType == nil {
@@ -164,6 +189,16 @@ func applyAction(room *RoomState, viewerID string, action ActionRequest, wordpac
 		}
 		normalizeRoundState(room)
 		return nil
+	case "set_psychic_reroll_limit":
+		if !canManageRoom(room, viewerID) || action.PsychicRerollLimit == nil {
+			return errUnauthorized
+		}
+		if *action.PsychicRerollLimit < 0 {
+			room.PsychicRerollLimit = 0
+		} else {
+			room.PsychicRerollLimit = *action.PsychicRerollLimit
+		}
+		return nil
 	case "set_randomize_teams":
 		if !canManageRoom(room, viewerID) || action.Value == nil {
 			return errUnauthorized
@@ -219,15 +254,16 @@ func applyAction(room *RoomState, viewerID string, action ActionRequest, wordpac
 		if !viewerCanSubmitCounterGuess(room, viewerID) {
 			return errUnauthorized
 		}
-		if action.CounterGuess != "left" && action.CounterGuess != "right" {
-			return fmt.Errorf("counterGuess must be left or right")
+		if action.CounterGuess != "left" && action.CounterGuess != "right" && action.CounterGuess != "exact" {
+			return fmt.Errorf("counterGuess must be left, right, or exact")
 		}
 		room.RoundPhase = RoundPhaseViewScore
 		room.CounterGuess = action.CounterGuess
 		pointsScored := getScore(room.SpectrumTarget, room.Guess)
 		wasCounterGuessCorrect :=
 			(action.CounterGuess == "left" && room.SpectrumTarget < room.Guess) ||
-				(action.CounterGuess == "right" && room.SpectrumTarget > room.Guess)
+				(action.CounterGuess == "right" && room.SpectrumTarget > room.Guess) ||
+				(action.CounterGuess == "exact" && room.SpectrumTarget == room.Guess)
 		if room.ActingTeam == TeamLeft {
 			room.LeftScore += pointsScored
 			if wasCounterGuessCorrect {
@@ -275,15 +311,20 @@ func applyAction(room *RoomState, viewerID string, action ActionRequest, wordpac
 		creatorID := room.CreatorID
 		psychicCount := room.PsychicCount
 		clueQuota := room.ClueQuota
+		psychicRerollLimit := room.PsychicRerollLimit
 		randomizeTeams := room.RandomizeTeams
 		deckLanguage := room.DeckLanguage
 		wordpack := room.Wordpack
+		wordpacks := append([]string(nil), room.Wordpacks...)
 		*room = InitialRoomState(deckLanguage)
 		room.Wordpack = normalizeWordpack(wordpack)
+		room.Wordpacks = normalizeWordpackList(wordpacks, room.Wordpack)
 		room.Players = preservedPlayers
 		room.CreatorID = creatorID
 		room.PsychicCount = psychicCount
 		room.ClueQuota = clueQuota
+		room.PsychicRerollLimit = psychicRerollLimit
+		room.PsychicRerollsUsed = 0
 		room.RandomizeTeams = randomizeTeams
 		room.PsychicPickCounts = map[string]int{}
 		return nil
@@ -297,10 +338,11 @@ func applyAction(room *RoomState, viewerID string, action ActionRequest, wordpac
 		playAgainRoom(room)
 		return nil
 	case "reroll_round":
-		if !canManageRoom(room, viewerID) && !isPsychic(room, viewerID) {
+		isModerator := canManageRoom(room, viewerID)
+		if !isModerator && !isPsychic(room, viewerID) {
 			return errUnauthorized
 		}
-		return rerollRound(room)
+		return rerollRound(room, isModerator)
 	case "reset_room_id":
 		return nil
 	default:
@@ -519,6 +561,7 @@ func resetScoresForGameType(room *RoomState) {
 	room.DeckIndex = 0
 	room.ActingTeam = TeamUnset
 	room.TeamsRandomized = false
+	room.PsychicRerollsUsed = 0
 }
 
 func playAgainRoom(room *RoomState) {
@@ -536,6 +579,7 @@ func playAgainRoom(room *RoomState) {
 	room.DeckIndex = 0
 	room.SpectrumTarget = randomSpectrumTarget()
 	room.PsychicPickCounts = map[string]int{}
+	room.PsychicRerollsUsed = 0
 	room.MigrationTokens = map[string]string{}
 	room.TeamsRandomized = false
 	if room.GameType == GameTypeTeams {
@@ -595,18 +639,57 @@ func randomizeTeamAssignments(room *RoomState) {
 	room.TeamsRandomized = true
 }
 
-func rerollRound(room *RoomState) error {
+func assignNewPlayerToBalancedTeam(room *RoomState, playerID string) {
+	if room.GameType != GameTypeTeams {
+		return
+	}
+	player, ok := room.Players[playerID]
+	if !ok || player.IsObserver || player.Team != TeamUnset {
+		return
+	}
+	leftCount := 0
+	rightCount := 0
+	for currentID, currentPlayer := range room.Players {
+		if currentID == playerID || currentPlayer.IsObserver {
+			continue
+		}
+		if currentPlayer.Team == TeamLeft {
+			leftCount++
+		}
+		if currentPlayer.Team == TeamRight {
+			rightCount++
+		}
+	}
+	if leftCount < rightCount {
+		player.Team = TeamLeft
+	} else if rightCount < leftCount {
+		player.Team = TeamRight
+	} else if seededRand().Intn(2) == 0 {
+		player.Team = TeamLeft
+	} else {
+		player.Team = TeamRight
+	}
+	room.Players[playerID] = player
+}
+
+func rerollRound(room *RoomState, isModerator bool) error {
 	if room.RoundPhase != RoundPhaseGiveClue {
 		return fmt.Errorf("prompt can only be rerolled before clues are submitted")
 	}
 	if len(room.Clues) > 0 {
 		return fmt.Errorf("prompt can only be rerolled before clues are submitted")
 	}
+	if !isModerator && room.PsychicRerollsUsed >= room.PsychicRerollLimit {
+		return fmt.Errorf("psychic reroll limit reached")
+	}
 	room.DeckIndex += 1
 	room.SpectrumTarget = randomSpectrumTarget()
 	room.Guess = 10
 	room.CounterGuess = "left"
 	room.Clues = []Clue{}
+	if !isModerator {
+		room.PsychicRerollsUsed += 1
+	}
 	return nil
 }
 
@@ -614,7 +697,15 @@ func viewerCanRerollRound(room *RoomState, viewerID string) bool {
 	if room.RoundPhase != RoundPhaseGiveClue || len(room.Clues) > 0 {
 		return false
 	}
-	return canManageRoom(room, viewerID) || isPsychic(room, viewerID)
+	return canManageRoom(room, viewerID) || (isPsychic(room, viewerID) && remainingPsychicRerolls(room) > 0)
+}
+
+func remainingPsychicRerolls(room *RoomState) int {
+	remaining := room.PsychicRerollLimit - room.PsychicRerollsUsed
+	if remaining < 0 {
+		return 0
+	}
+	return remaining
 }
 
 func incrementPsychicPickCounts(room *RoomState, psychicIDs []string) {
@@ -710,6 +801,7 @@ func startRound(room *RoomState, viewerID string) error {
 	room.Clues = []Clue{}
 	room.Guess = 10
 	room.CounterGuess = "left"
+	room.PsychicRerollsUsed = 0
 	room.PsychicIDs = choosePsychics(room, nil, room.PsychicCount)
 	if len(room.PsychicIDs) == 0 {
 		return fmt.Errorf("no eligible psychics available")
@@ -805,6 +897,9 @@ func normalizeRoundState(room *RoomState) {
 	if room.ClueQuota < 1 {
 		room.ClueQuota = 1
 	}
+	if room.PsychicRerollLimit < 0 {
+		room.PsychicRerollLimit = 0
+	}
 	filteredPsychics := make([]string, 0, len(room.PsychicIDs))
 	for _, psychicID := range room.PsychicIDs {
 		player, ok := room.Players[psychicID]
@@ -853,19 +948,20 @@ func sanitizeRoomForViewer(room RoomState, roomID string, viewerID string) RoomV
 	view.Players = players
 	viewerPlayer := players[viewerID]
 	view.Viewer = ViewerState{
-		PlayerID:              viewerID,
-		CanManageRoom:         viewerPlayer.IsModerator,
-		CanSetGuess:           viewerCanSetGuess(&room, viewerID),
-		CanSubmitGuess:        viewerCanSubmitGuess(&room, viewerID),
-		CanSubmitCounterGuess: viewerCanSubmitCounterGuess(&room, viewerID),
-		CanSubmitClue:         room.RoundPhase == RoundPhaseGiveClue && isPsychic(&room, viewerID) && len(room.Clues) < effectiveClueQuota(&room) && !playerHasSubmittedClue(room, viewerID),
-		CanStartRound:         canStartRound(&room, viewerID),
-		CanChangeTeam:         !viewerPlayer.IsObserver,
-		CanRerollRound:        viewerCanRerollRound(&room, viewerID),
-		EffectiveClueQuota:    effectiveClueQuota(&room),
-		SubmittedClueCount:    len(room.Clues),
-		IsCurrentPsychic:      isPsychic(&room, viewerID),
-		IsTemporaryRep:        viewerTemporaryRep(&room, viewerID),
+		PlayerID:                viewerID,
+		CanManageRoom:           viewerPlayer.IsModerator,
+		CanSetGuess:             viewerCanSetGuess(&room, viewerID),
+		CanSubmitGuess:          viewerCanSubmitGuess(&room, viewerID),
+		CanSubmitCounterGuess:   viewerCanSubmitCounterGuess(&room, viewerID),
+		CanSubmitClue:           room.RoundPhase == RoundPhaseGiveClue && isPsychic(&room, viewerID) && len(room.Clues) < effectiveClueQuota(&room) && !playerHasSubmittedClue(room, viewerID),
+		CanStartRound:           canStartRound(&room, viewerID),
+		CanChangeTeam:           !viewerPlayer.IsObserver,
+		CanRerollRound:          viewerCanRerollRound(&room, viewerID),
+		EffectiveClueQuota:      effectiveClueQuota(&room),
+		SubmittedClueCount:      len(room.Clues),
+		RemainingPsychicRerolls: remainingPsychicRerolls(&room),
+		IsCurrentPsychic:        isPsychic(&room, viewerID),
+		IsTemporaryRep:          viewerTemporaryRep(&room, viewerID),
 	}
 	if !canSeeTarget(&room, viewerID) {
 		view.SpectrumTarget = 0

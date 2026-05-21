@@ -291,6 +291,7 @@ func (app *App) handleJoinRoom(w http.ResponseWriter, r *http.Request) {
 			IsModerator:   room.CreatorID == "",
 			SessionSecret: randomToken(16),
 		}
+		assignNewPlayerToBalancedTeam(room, joinedPlayerID)
 		if room.CreatorID == "" {
 			room.CreatorID = joinedPlayerID
 		}

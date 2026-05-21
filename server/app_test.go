@@ -164,10 +164,25 @@ func TestModeratorCanSetWordpackDuringSetupAndMidGame(t *testing.T) {
 	if setPersianBody.Wordpack != "Persian" {
 		t.Fatalf("expected Persian wordpack, got %q", setPersianBody.Wordpack)
 	}
+	if strings.Join(setPersianBody.Wordpacks, ",") != "Persian" {
+		t.Fatalf("expected legacy set_wordpack to update wordpacks, got %v", setPersianBody.Wordpacks)
+	}
+
+	setMultiple := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/actions", map[string]any{
+		"type":      "set_wordpacks",
+		"wordpacks": []string{"Persian", "English"},
+	}, aliceCookie)
+	if setMultiple.StatusCode != http.StatusOK {
+		t.Fatalf("expected moderator set_wordpacks to return 200, got %d", setMultiple.StatusCode)
+	}
+	setMultipleBody := decodeBody[RoomView](t, setMultiple.Body)
+	if strings.Join(setMultipleBody.Wordpacks, ",") != "Persian,English" || setMultipleBody.Wordpack != "Persian" {
+		t.Fatalf("expected multiple wordpacks with legacy first value preserved, got wordpack=%q wordpacks=%v", setMultipleBody.Wordpack, setMultipleBody.Wordpacks)
+	}
 
 	invalid := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/actions", map[string]any{
-		"type":     "set_wordpack",
-		"wordpack": "Missing",
+		"type":      "set_wordpacks",
+		"wordpacks": []string{"English", "Missing"},
 	}, aliceCookie)
 	if invalid.StatusCode != http.StatusBadRequest {
 		t.Fatalf("expected invalid wordpack to return 400, got %d", invalid.StatusCode)

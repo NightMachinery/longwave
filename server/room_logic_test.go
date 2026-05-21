@@ -152,6 +152,25 @@ func TestRandomizeTeamAssignmentsBalancesActivePlayers(t *testing.T) {
 	}
 }
 
+func TestNewTeamGameJoinerIsAssignedToSmallerTeam(t *testing.T) {
+	t.Parallel()
+
+	room := InitialRoomState("en")
+	room.GameType = GameTypeTeams
+	room.Players = map[string]PlayerState{
+		"alice": {Name: "Alice", Team: TeamLeft},
+		"bob":   {Name: "Bob", Team: TeamLeft},
+		"carol": {Name: "Carol", Team: TeamRight},
+		"dana":  {Name: "Dana"},
+	}
+
+	assignNewPlayerToBalancedTeam(&room, "dana")
+
+	if room.Players["dana"].Team != TeamRight {
+		t.Fatalf("expected new joiner to be assigned to smaller right team, got %v", room.Players["dana"].Team)
+	}
+}
+
 func TestEnterTeamSetupHonorsRandomizeTeamsSetting(t *testing.T) {
 	t.Parallel()
 
@@ -195,6 +214,57 @@ func TestPsychicCanRerollBeforeAnyClue(t *testing.T) {
 	room.Clues = []Clue{{AuthorID: "bob", AuthorName: "Bob", Text: "coffee"}}
 	if err := applyAction(&room, "bob", ActionRequest{Type: "reroll_round"}, nil); err == nil {
 		t.Fatalf("expected reroll after a clue to fail")
+	}
+}
+
+func TestPsychicRerollLimitIsSharedPerRoundAndModsBypassIt(t *testing.T) {
+	t.Parallel()
+
+	room := InitialRoomState("en")
+	room.RoundPhase = RoundPhaseGiveClue
+	room.PsychicIDs = []string{"bob", "carol"}
+	room.Players = map[string]PlayerState{
+		"alice": {Name: "Alice", IsModerator: true},
+		"bob":   {Name: "Bob"},
+		"carol": {Name: "Carol"},
+	}
+
+	if err := applyAction(&room, "bob", ActionRequest{Type: "reroll_round"}, nil); err != nil {
+		t.Fatalf("expected first psychic reroll to succeed: %v", err)
+	}
+	if err := applyAction(&room, "carol", ActionRequest{Type: "reroll_round"}, nil); err != nil {
+		t.Fatalf("expected second psychic reroll to succeed: %v", err)
+	}
+	if err := applyAction(&room, "bob", ActionRequest{Type: "reroll_round"}, nil); err == nil {
+		t.Fatalf("expected shared psychic reroll limit to reject third reroll")
+	}
+	if err := applyAction(&room, "alice", ActionRequest{Type: "reroll_round"}, nil); err != nil {
+		t.Fatalf("expected moderator reroll to bypass the limit: %v", err)
+	}
+	if room.PsychicRerollsUsed != 2 {
+		t.Fatalf("expected moderator reroll not to increment psychic usage, got %d", room.PsychicRerollsUsed)
+	}
+}
+
+func TestExactCounterGuessScoresWhenTargetEqualsGuess(t *testing.T) {
+	t.Parallel()
+
+	room := InitialRoomState("en")
+	room.GameType = GameTypeTeams
+	room.RoundPhase = RoundPhaseCounterGuess
+	room.ActingTeam = TeamLeft
+	room.SpectrumTarget = 8
+	room.Guess = 8
+	room.Players = map[string]PlayerState{
+		"alice": {Name: "Alice", Team: TeamLeft},
+		"bob":   {Name: "Bob", Team: TeamRight},
+	}
+
+	if err := applyAction(&room, "bob", ActionRequest{Type: "submit_counterguess", CounterGuess: "exact"}, nil); err != nil {
+		t.Fatalf("expected exact counterguess to succeed: %v", err)
+	}
+	if room.LeftScore != 4 || room.RightScore != 1 {
+		t.Fatalf("expected left to score 4 and right exact bonus 1, got left=%d right=%d", room.LeftScore, room.RightScore)
 	}
 }
 

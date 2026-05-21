@@ -91,9 +91,12 @@ type RoomState struct {
 	PreviousGameResult *PreviousGameResult    `json:"previousGameResult"`
 	DeckLanguage       string                 `json:"deckLanguage"`
 	Wordpack           string                 `json:"wordpack"`
+	Wordpacks          []string               `json:"wordpacks"`
 	CreatorID          string                 `json:"creatorId"`
 	PsychicCount       int                    `json:"psychicCount"`
 	ClueQuota          int                    `json:"clueQuota"`
+	PsychicRerollLimit int                    `json:"psychicRerollLimit"`
+	PsychicRerollsUsed int                    `json:"psychicRerollsUsed"`
 	RandomizeTeams     *bool                  `json:"randomizeTeams"`
 	TeamsRandomized    bool                   `json:"teamsRandomized,omitempty"`
 	PsychicPickCounts  map[string]int         `json:"psychicPickCounts,omitempty"`
@@ -102,19 +105,20 @@ type RoomState struct {
 }
 
 type ViewerState struct {
-	PlayerID              string `json:"playerId"`
-	CanManageRoom         bool   `json:"canManageRoom"`
-	CanSetGuess           bool   `json:"canSetGuess"`
-	CanSubmitGuess        bool   `json:"canSubmitGuess"`
-	CanSubmitCounterGuess bool   `json:"canSubmitCounterGuess"`
-	CanSubmitClue         bool   `json:"canSubmitClue"`
-	CanStartRound         bool   `json:"canStartRound"`
-	CanChangeTeam         bool   `json:"canChangeTeam"`
-	CanRerollRound        bool   `json:"canRerollRound"`
-	EffectiveClueQuota    int    `json:"effectiveClueQuota"`
-	SubmittedClueCount    int    `json:"submittedClueCount"`
-	IsCurrentPsychic      bool   `json:"isCurrentPsychic"`
-	IsTemporaryRep        bool   `json:"isTemporaryRep"`
+	PlayerID                string `json:"playerId"`
+	CanManageRoom           bool   `json:"canManageRoom"`
+	CanSetGuess             bool   `json:"canSetGuess"`
+	CanSubmitGuess          bool   `json:"canSubmitGuess"`
+	CanSubmitCounterGuess   bool   `json:"canSubmitCounterGuess"`
+	CanSubmitClue           bool   `json:"canSubmitClue"`
+	CanStartRound           bool   `json:"canStartRound"`
+	CanChangeTeam           bool   `json:"canChangeTeam"`
+	CanRerollRound          bool   `json:"canRerollRound"`
+	EffectiveClueQuota      int    `json:"effectiveClueQuota"`
+	SubmittedClueCount      int    `json:"submittedClueCount"`
+	RemainingPsychicRerolls int    `json:"remainingPsychicRerolls"`
+	IsCurrentPsychic        bool   `json:"isCurrentPsychic"`
+	IsTemporaryRep          bool   `json:"isTemporaryRep"`
 }
 
 type RoomView struct {
@@ -149,9 +153,12 @@ func InitialRoomState(deckLanguage string) RoomState {
 		PreviousGameResult: nil,
 		DeckLanguage:       deckLanguage,
 		Wordpack:           wordpack,
+		Wordpacks:          []string{wordpack},
 		CreatorID:          "",
 		PsychicCount:       1,
 		ClueQuota:          1,
+		PsychicRerollLimit: 2,
+		PsychicRerollsUsed: 0,
 		RandomizeTeams:     boolPointer(true),
 		PsychicPickCounts:  map[string]int{},
 		MigrationTokens:    map[string]string{},
@@ -229,7 +236,12 @@ func normalizeRoomStateShape(room *RoomState) {
 	} else {
 		room.Wordpack = normalizeWordpack(room.Wordpack)
 	}
+	room.Wordpacks = normalizeWordpackList(room.Wordpacks, room.Wordpack)
+	room.Wordpack = room.Wordpacks[0]
 	if strings.TrimSpace(room.DeckLanguage) == "" {
 		room.DeckLanguage = "en"
+	}
+	if room.PsychicRerollLimit < 0 {
+		room.PsychicRerollLimit = 0
 	}
 }
