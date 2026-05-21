@@ -12,7 +12,7 @@ This folder documents the gameplay modes available from the room setup screen.
 
 | Mode | Recommended players | Teams? | Hidden target? | Guessing flow | Scoring |
 | --- | --- | --- | --- | --- | --- |
-| Standard (Teams) | 4+ | Yes | Yes | One team gives a clue, that team guesses, then the other team counter-guesses | Race to 10 points |
+| Standard (Teams) | 4+ | Yes | Yes | One team gives a clue, that team guesses, then the other team counter-guesses left, right, or exact | Race to 10 points |
 | Cooperative | 2+ | No formal teams | Yes | One player clues, everyone else discusses and submits one shared guess | Shared score over a fixed number of rounds |
 | Free Play | 2+ | No | Yes | One player clues, everyone else discusses and submits one shared guess | No running score |
 

@@ -26,7 +26,7 @@ For the new moderator / representative / observer / psychic behavior and the sec
 Longwave has two separate language concepts:
 
 - **UI translations** live in `public/locales/<language>/translation.json` and control buttons, labels, and help text.
-- **Wordpacks** live in `wordpacks/*.jsonl` and control the spectrum prompts used by a room. The room creator/moderator chooses the wordpack during room setup; it defaults to `English` regardless of UI language.
+- **Wordpacks** live in `wordpacks/*.jsonl` and control the spectrum prompts used by a room. The room creator/moderator can choose one or more wordpacks during room setup; prompts are drawn from the selected union and default to `English` regardless of UI language.
 
 To add a new UI translation, follow these steps:
 
@@ -110,7 +110,8 @@ That flow replaces the old Firebase runtime dependency with a local Go + SQLite 
 - Clicking the visible room ID copies the same clean invite link.
 - **Migrate device** requests a one-time migration link with `?migrate=...` so another device can take over the same in-room identity.
 - **Play Again** restarts the game in the same room while preserving the creator, player list, and room settings.
-- In team mode, moderators can use default-on balanced random team assignment, rerandomize during team setup, and still adjust non-psychic players manually.
+- In team mode, moderators can use default-on balanced random team assignment, new joiners are placed on the smaller team, and moderators can still adjust non-psychic players manually.
+- Current psychics can reroll prompts before clues are submitted up to the moderator-configured per-round limit; moderators can reroll without using that limit.
 - **Reset Room ID** rotates the room code so the previous join link no longer accepts new joins.
 - Hidden round information is filtered by the backend so only current psychics see the target during clueing.
 - Player names are remembered locally per browser and **Change Name** updates the live in-room identity.
