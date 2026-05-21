@@ -17,7 +17,7 @@ After the team's guess attempt, the other team also has the opportunity to score
 
 The first team to score 10 points wins.
 
-For a mode-by-mode explanation of Standard (Teams), Cooperative, and Free Play, see `docs/modes/README.md`.
+For a mode-by-mode explanation of Standard (Teams), Cooperative, Free Play, and Individual, see `docs/modes/README.md`.
 
 For the new moderator / representative / observer / psychic behavior and the secure migration flow, see `docs/roles.md`.
 
@@ -111,6 +111,7 @@ That flow replaces the old Firebase runtime dependency with a local Go + SQLite 
 - **Migrate device** requests a one-time migration link with `?migrate=...` so another device can take over the same in-room identity.
 - **Play Again** restarts the game in the same room while preserving the creator, player list, and room settings.
 - In team mode, moderators can use default-on balanced random team assignment, new joiners are placed on the smaller team, and moderators can still adjust non-psychic players manually.
+- In individual mode, each active non-clue-giver submits a private guess, and moderators can configure how many times everyone must be clue-giver before final scoring.
 - Current psychics can reroll prompts before clues are submitted up to the moderator-configured per-round limit; moderators can reroll without using that limit.
 - **Reset Room ID** rotates the room code so the previous join link no longer accepts new joins.
 - Hidden round information is filtered by the backend so only current psychics see the target during clueing.

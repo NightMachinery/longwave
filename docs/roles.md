@@ -19,9 +19,10 @@ Longwave now supports server-enforced room roles and filtered hidden information
   - They keep their stored team, moderator, and representative flags while observing.
   - Observers can rejoin active play by themselves.
   - Moderators retain moderator powers even while observing.
-- **Psychic**
+- **Psychic / clue-giver**
   - Psychics are chosen from the eligible active player pool, preferring players who have been psychic the fewest times in the current game and randomizing only within ties.
   - Team mode picks psychics from the acting team; Cooperative and Free Play pick from the whole active room.
+  - Individual mode always picks one clue-giver from active non-observers, preferring players who have been clue-giver the fewest times.
 
 ## Psychic count and clue quota
 
@@ -29,6 +30,7 @@ Moderators can change two room-wide settings from the room menu:
 
 - **Psychic count**: how many psychics are chosen for each round.
 - **Clue quota (`k`)**: how many total clues the room waits for before guessing starts.
+- **Rounds as clue giver**: Individual-mode target for how many times every active player must become clue-giver before the game ends.
 
 Rules:
 
@@ -36,6 +38,7 @@ Rules:
 - The effective clue quota is `min(k, eligible psychics this round)`.
 - Non-psychics do not see clues until the clue quota has been satisfied.
 - Once the quota is reached, clue submission is closed for the round.
+- Individual mode ignores psychic count and clue quota and always uses one clue-giver and one clue.
 
 ## Hidden information
 
