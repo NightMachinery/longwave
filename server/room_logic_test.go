@@ -352,6 +352,53 @@ func TestIndividualRoundAveragesAllNonObserverGuesses(t *testing.T) {
 	if room.IndividualScores["alice"] != 2 {
 		t.Fatalf("expected clue giver average score 2, got %.2f", room.IndividualScores["alice"])
 	}
+	if room.IndividualScores["bob"] != 4 {
+		t.Fatalf("expected bob to receive normal guess score 4, got %.2f", room.IndividualScores["bob"])
+	}
+	if room.IndividualScores["carol"] != 0 {
+		t.Fatalf("expected carol to receive normal guess score 0, got %.2f", room.IndividualScores["carol"])
+	}
+}
+
+func TestIndividualDraftGuessesAreDisplayOnlyAndSanitized(t *testing.T) {
+	t.Parallel()
+
+	room := InitialRoomState("en")
+	room.GameType = GameTypeIndividual
+	room.RoundPhase = RoundPhaseMakeGuess
+	room.SpectrumTarget = 10
+	room.PsychicIDs = []string{"alice"}
+	room.Players = map[string]PlayerState{
+		"alice": {Name: "Alice"},
+		"bob":   {Name: "Bob"},
+		"carol": {Name: "Carol"},
+	}
+
+	if err := applyAction(&room, "bob", ActionRequest{Type: "set_individual_draft_guess", Guess: intPointer(11)}, nil); err != nil {
+		t.Fatalf("expected draft guess to succeed: %v", err)
+	}
+	if room.RoundPhase != RoundPhaseMakeGuess {
+		t.Fatalf("expected draft guess not to reveal round, got phase %v", room.RoundPhase)
+	}
+	if room.IndividualScores["bob"] != 0 {
+		t.Fatalf("expected draft guess not to score, got %.2f", room.IndividualScores["bob"])
+	}
+
+	clueGiverView := sanitizeRoomForViewer(room, "ROOM", "alice")
+	if clueGiverView.IndividualDraftGuesses["bob"] != 11 {
+		t.Fatalf("expected clue giver to see live draft, got %v", clueGiverView.IndividualDraftGuesses)
+	}
+	carolView := sanitizeRoomForViewer(room, "ROOM", "carol")
+	if _, ok := carolView.IndividualDraftGuesses["bob"]; ok {
+		t.Fatalf("expected non-clue-giver not to see another player's draft, got %v", carolView.IndividualDraftGuesses)
+	}
+
+	disabled := false
+	room.IndividualClueGiverCanSeeLiveGuesses = &disabled
+	hiddenView := sanitizeRoomForViewer(room, "ROOM", "alice")
+	if len(hiddenView.IndividualDraftGuesses) != 0 {
+		t.Fatalf("expected clue giver live drafts to be hidden when setting is disabled, got %v", hiddenView.IndividualDraftGuesses)
+	}
 }
 
 func TestSetIndividualModeWaitsForEnoughActivePlayers(t *testing.T) {
@@ -378,6 +425,9 @@ func TestSetIndividualModeWaitsForEnoughActivePlayers(t *testing.T) {
 	normalizeRoundState(&room)
 	if !canStartRound(&room, "alice") {
 		t.Fatalf("expected start round to be enabled with two active players")
+	}
+	if room.IndividualClueGiverTarget != 3 {
+		t.Fatalf("expected individual clue giver target to default to 3, got %d", room.IndividualClueGiverTarget)
 	}
 }
 

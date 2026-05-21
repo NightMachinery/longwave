@@ -32,21 +32,22 @@ func getScore(target int, guess int) int {
 }
 
 type ActionRequest struct {
-	Type                      string   `json:"type"`
-	PlayerID                  string   `json:"playerId,omitempty"`
-	Name                      string   `json:"name,omitempty"`
-	GameType                  *int     `json:"gameType,omitempty"`
-	Team                      *int     `json:"team,omitempty"`
-	PsychicCount              *int     `json:"psychicCount,omitempty"`
-	ClueQuota                 *int     `json:"clueQuota,omitempty"`
-	Guess                     *int     `json:"guess,omitempty"`
-	CounterGuess              string   `json:"counterGuess,omitempty"`
-	Clue                      string   `json:"clue,omitempty"`
-	Value                     *bool    `json:"value,omitempty"`
-	Wordpack                  string   `json:"wordpack,omitempty"`
-	Wordpacks                 []string `json:"wordpacks,omitempty"`
-	PsychicRerollLimit        *int     `json:"psychicRerollLimit,omitempty"`
-	IndividualClueGiverTarget *int     `json:"individualClueGiverTarget,omitempty"`
+	Type                                 string   `json:"type"`
+	PlayerID                             string   `json:"playerId,omitempty"`
+	Name                                 string   `json:"name,omitempty"`
+	GameType                             *int     `json:"gameType,omitempty"`
+	Team                                 *int     `json:"team,omitempty"`
+	PsychicCount                         *int     `json:"psychicCount,omitempty"`
+	ClueQuota                            *int     `json:"clueQuota,omitempty"`
+	Guess                                *int     `json:"guess,omitempty"`
+	CounterGuess                         string   `json:"counterGuess,omitempty"`
+	Clue                                 string   `json:"clue,omitempty"`
+	Value                                *bool    `json:"value,omitempty"`
+	Wordpack                             string   `json:"wordpack,omitempty"`
+	Wordpacks                            []string `json:"wordpacks,omitempty"`
+	PsychicRerollLimit                   *int     `json:"psychicRerollLimit,omitempty"`
+	IndividualClueGiverTarget            *int     `json:"individualClueGiverTarget,omitempty"`
+	IndividualClueGiverCanSeeLiveGuesses *bool    `json:"individualClueGiverCanSeeLiveGuesses,omitempty"`
 }
 
 func isTeamGameOver(room *RoomState) bool {
@@ -233,6 +234,12 @@ func applyAction(room *RoomState, viewerID string, action ActionRequest, wordpac
 			room.IndividualClueGiverTarget = *action.IndividualClueGiverTarget
 		}
 		return nil
+	case "set_individual_live_guesses":
+		if !canManageRoom(room, viewerID) || action.IndividualClueGiverCanSeeLiveGuesses == nil {
+			return errUnauthorized
+		}
+		room.IndividualClueGiverCanSeeLiveGuesses = boolPointer(*action.IndividualClueGiverCanSeeLiveGuesses)
+		return nil
 	case "set_randomize_teams":
 		if !canManageRoom(room, viewerID) || action.Value == nil {
 			return errUnauthorized
@@ -292,6 +299,11 @@ func applyAction(room *RoomState, viewerID string, action ActionRequest, wordpac
 			return errUnauthorized
 		}
 		return submitIndividualGuess(room, viewerID, *action.Guess)
+	case "set_individual_draft_guess":
+		if action.Guess == nil {
+			return errUnauthorized
+		}
+		return setIndividualDraftGuess(room, viewerID, *action.Guess)
 	case "submit_counterguess":
 		if !viewerCanSubmitCounterGuess(room, viewerID) {
 			return errUnauthorized
@@ -355,6 +367,7 @@ func applyAction(room *RoomState, viewerID string, action ActionRequest, wordpac
 		clueQuota := room.ClueQuota
 		psychicRerollLimit := room.PsychicRerollLimit
 		individualClueGiverTarget := room.IndividualClueGiverTarget
+		individualClueGiverCanSeeLiveGuesses := room.IndividualClueGiverCanSeeLiveGuesses
 		randomizeTeams := room.RandomizeTeams
 		deckLanguage := room.DeckLanguage
 		wordpack := room.Wordpack
@@ -369,8 +382,10 @@ func applyAction(room *RoomState, viewerID string, action ActionRequest, wordpac
 		room.PsychicRerollLimit = psychicRerollLimit
 		room.PsychicRerollsUsed = 0
 		room.IndividualClueGiverTarget = individualClueGiverTarget
+		room.IndividualClueGiverCanSeeLiveGuesses = individualClueGiverCanSeeLiveGuesses
 		room.IndividualScores = map[string]float64{}
 		room.IndividualGuesses = map[string]int{}
+		room.IndividualDraftGuesses = map[string]int{}
 		room.ClueGiverCounts = map[string]int{}
 		room.RandomizeTeams = randomizeTeams
 		room.PsychicPickCounts = map[string]int{}
@@ -618,6 +633,23 @@ func viewerCanSubmitIndividualGuess(room *RoomState, viewerID string) bool {
 	return !alreadySubmitted
 }
 
+func setIndividualDraftGuess(room *RoomState, viewerID string, guess int) error {
+	if !viewerCanSubmitIndividualGuess(room, viewerID) {
+		return errUnauthorized
+	}
+	if guess < 0 {
+		guess = 0
+	}
+	if guess > 20 {
+		guess = 20
+	}
+	if room.IndividualDraftGuesses == nil {
+		room.IndividualDraftGuesses = map[string]int{}
+	}
+	room.IndividualDraftGuesses[viewerID] = guess
+	return nil
+}
+
 func submitIndividualGuess(room *RoomState, viewerID string, guess int) error {
 	if !viewerCanSubmitIndividualGuess(room, viewerID) {
 		return errUnauthorized
@@ -631,7 +663,11 @@ func submitIndividualGuess(room *RoomState, viewerID string, guess int) error {
 	if room.IndividualGuesses == nil {
 		room.IndividualGuesses = map[string]int{}
 	}
+	if room.IndividualDraftGuesses == nil {
+		room.IndividualDraftGuesses = map[string]int{}
+	}
 	room.IndividualGuesses[viewerID] = guess
+	room.IndividualDraftGuesses[viewerID] = guess
 	if allIndividualGuessersSubmitted(room) {
 		scoreIndividualRound(room)
 		room.RoundPhase = RoundPhaseViewScore
@@ -671,14 +707,16 @@ func scoreIndividualRound(room *RoomState) {
 	if len(guessers) == 0 {
 		return
 	}
-	total := 0
-	for _, playerID := range guessers {
-		total += getScore(room.SpectrumTarget, room.IndividualGuesses[playerID])
-	}
-	clueGiverID := room.PsychicIDs[0]
 	if room.IndividualScores == nil {
 		room.IndividualScores = map[string]float64{}
 	}
+	total := 0
+	for _, playerID := range guessers {
+		score := getScore(room.SpectrumTarget, room.IndividualGuesses[playerID])
+		total += score
+		room.IndividualScores[playerID] += float64(score)
+	}
+	clueGiverID := room.PsychicIDs[0]
 	room.IndividualScores[clueGiverID] += float64(total) / float64(len(guessers))
 }
 
@@ -699,6 +737,7 @@ func resetScoresForGameType(room *RoomState) {
 	room.PsychicRerollsUsed = 0
 	room.IndividualScores = map[string]float64{}
 	room.IndividualGuesses = map[string]int{}
+	room.IndividualDraftGuesses = map[string]int{}
 	room.ClueGiverCounts = map[string]int{}
 }
 
@@ -720,6 +759,7 @@ func playAgainRoom(room *RoomState) {
 	room.PsychicRerollsUsed = 0
 	room.IndividualScores = map[string]float64{}
 	room.IndividualGuesses = map[string]int{}
+	room.IndividualDraftGuesses = map[string]int{}
 	room.ClueGiverCounts = map[string]int{}
 	room.MigrationTokens = map[string]string{}
 	room.TeamsRandomized = false
@@ -1001,6 +1041,7 @@ func startRound(room *RoomState, viewerID string) error {
 	room.Guess = 10
 	room.CounterGuess = "left"
 	room.IndividualGuesses = map[string]int{}
+	room.IndividualDraftGuesses = map[string]int{}
 	room.PsychicRerollsUsed = 0
 	if room.GameType == GameTypeIndividual {
 		if len(activePlayerIDs(room)) < 2 {
@@ -1099,6 +1140,9 @@ func normalizeRoundState(room *RoomState) {
 	if room.IndividualGuesses == nil {
 		room.IndividualGuesses = map[string]int{}
 	}
+	if room.IndividualDraftGuesses == nil {
+		room.IndividualDraftGuesses = map[string]int{}
+	}
 	if room.ClueGiverCounts == nil {
 		room.ClueGiverCounts = map[string]int{}
 	}
@@ -1134,6 +1178,12 @@ func normalizeRoundState(room *RoomState) {
 			delete(room.IndividualGuesses, playerID)
 		}
 	}
+	for playerID := range room.IndividualDraftGuesses {
+		player, ok := room.Players[playerID]
+		if !ok || player.IsObserver || isPsychic(room, playerID) {
+			delete(room.IndividualDraftGuesses, playerID)
+		}
+	}
 	if room.PsychicCount < 1 {
 		room.PsychicCount = 1
 	}
@@ -1144,7 +1194,10 @@ func normalizeRoundState(room *RoomState) {
 		room.PsychicRerollLimit = 0
 	}
 	if room.IndividualClueGiverTarget < 1 {
-		room.IndividualClueGiverTarget = 1
+		room.IndividualClueGiverTarget = 3
+	}
+	if room.IndividualClueGiverCanSeeLiveGuesses == nil {
+		room.IndividualClueGiverCanSeeLiveGuesses = boolPointer(true)
 	}
 	filteredPsychics := make([]string, 0, len(room.PsychicIDs))
 	for _, psychicID := range room.PsychicIDs {
@@ -1206,6 +1259,7 @@ func sanitizeRoomForViewer(room RoomState, roomID string, viewerID string) RoomV
 	view.MigrationTokens = nil
 	view.PsychicPickCounts = nil
 	view.RedirectRoomID = ""
+	view.IndividualDraftGuesses = map[string]int{}
 	players := map[string]PlayerState{}
 	for playerID, player := range room.Players {
 		player.SessionSecret = ""
@@ -1245,8 +1299,23 @@ func sanitizeRoomForViewer(room RoomState, roomID string, viewerID string) RoomV
 			}
 		}
 		view.IndividualGuesses = filteredGuesses
+		view.IndividualDraftGuesses = map[string]int{}
+		if isPsychic(&room, viewerID) && room.IndividualClueGiverCanSeeLiveGuesses != nil && *room.IndividualClueGiverCanSeeLiveGuesses {
+			view.IndividualDraftGuesses = copyIntMap(room.IndividualDraftGuesses)
+		}
+	}
+	if room.GameType == GameTypeIndividual && room.RoundPhase == RoundPhaseViewScore {
+		view.IndividualDraftGuesses = copyIntMap(room.IndividualGuesses)
 	}
 	return view
+}
+
+func copyIntMap(values map[string]int) map[string]int {
+	result := map[string]int{}
+	for key, value := range values {
+		result[key] = value
+	}
+	return result
 }
 
 func playerHasSubmittedClue(room RoomState, viewerID string) bool {

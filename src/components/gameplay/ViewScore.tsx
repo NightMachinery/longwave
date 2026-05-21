@@ -7,6 +7,7 @@ import { GameType, Team, TeamName, TeamReverse } from "../../state/GameState";
 import { GameModelContext } from "../../state/GameModelContext";
 import { Info } from "../common/Info";
 import { Trans, useTranslation } from "react-i18next";
+import { buildIndividualGuessMarkers } from "./IndividualGuessMarkers";
 
 export function ViewScore() {
   const { t } = useTranslation();
@@ -99,10 +100,20 @@ function IndividualScoreReveal(props: { isGameOver: boolean }) {
       ? 0
       : roundScores.reduce((total, score) => total + score, 0) / roundScores.length;
   const winnerIds = individualWinnerIds(gameState);
+  const dotMarkers = buildIndividualGuessMarkers(
+    Object.keys(gameState.individualDraftGuesses).length > 0
+      ? gameState.individualDraftGuesses
+      : gameState.individualGuesses,
+    gameState.players
+  );
 
   return (
     <div className={props.isGameOver ? "end-game-reveal" : undefined}>
-      <Spectrum spectrumCard={spectrumCard} targetValue={gameState.spectrumTarget} />
+      <Spectrum
+        spectrumCard={spectrumCard}
+        targetValue={gameState.spectrumTarget}
+        dotMarkers={dotMarkers}
+      />
       <CenteredColumn>
         {gameState.clues.map((clue) => (
           <div key={`${clue.authorId}-${clue.order}`}>

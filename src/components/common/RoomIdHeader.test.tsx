@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { I18nextProvider } from "react-i18next";
 import i18n from "../gameplay/i18nForTests";
 import { GameModelContext } from "../../state/GameModelContext";
-import { InitialGameState, RoundPhase, Team } from "../../state/GameState";
+import { GameType, InitialGameState, RoundPhase, Team } from "../../state/GameState";
 import { RoomMenu } from "./RoomIdHeader";
 import { copyTextToClipboard } from "../../utils/copyTextToClipboard";
 import { fetchWordpacks, requestMigrationLink } from "../../network/roomApi";
@@ -180,6 +180,67 @@ describe("RoomMenu", () => {
     expect(submitAction).toHaveBeenCalledWith({
       type: "set_wordpacks",
       wordpacks: ["English", "Persian"],
+    });
+  });
+
+  it("lets moderators toggle individual live guess visibility", () => {
+    const submitAction = jest.fn();
+    const component = render(
+      <GameModelContext.Provider
+        value={{
+          gameState: {
+            ...InitialGameState("en"),
+            gameType: GameType.Individual,
+            individualClueGiverCanSeeLiveGuesses: true,
+            viewer: {
+              ...InitialGameState("en").viewer,
+              playerId: "player-id",
+              canManageRoom: true,
+            },
+            players: {
+              "player-id": {
+                name: "Player",
+                team: Team.Unset,
+                isModerator: true,
+                isRepresentative: false,
+                isObserver: false,
+              },
+            },
+          },
+          localPlayer: {
+            id: "player-id",
+            name: "Player",
+            team: Team.Unset,
+            isModerator: true,
+            isRepresentative: false,
+            isObserver: false,
+          },
+          psychics: [],
+          spectrumCard: { left: { text: "left" }, right: { text: "right" } },
+          previousSpectrumCard: null,
+          submitAction,
+          openNameEditor: jest.fn(),
+        }}
+      >
+        <Suspense fallback={<div>Loading...</div>}>
+          <I18nextProvider i18n={i18n}>
+            <RoomMenu
+              roomId="ROOM"
+              canonicalRoomUrl="http://localhost/ROOM"
+              showCopyNotice={async () => {}}
+              showNotice={jest.fn()}
+            />
+          </I18nextProvider>
+        </Suspense>
+      </GameModelContext.Provider>
+    );
+
+    fireEvent.click(component.getByText("Game settings"));
+    fireEvent.click(component.getByLabelText("Clue givers see players guessing in real-time"));
+
+    expect(submitAction).toHaveBeenCalledWith({
+      type: "set_individual_live_guesses",
+      individualClueGiverCanSeeLiveGuesses: false,
     });
   });
 

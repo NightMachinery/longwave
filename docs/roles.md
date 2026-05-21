@@ -31,6 +31,7 @@ Moderators can change two room-wide settings from the room menu:
 - **Psychic count**: how many psychics are chosen for each round.
 - **Clue quota (`k`)**: how many total clues the room waits for before guessing starts.
 - **Rounds as clue giver**: Individual-mode target for how many times every active player must become clue-giver before the game ends.
+- **Clue givers see players guessing in real-time**: Individual-mode visibility setting for live colored guess markers during the guessing phase.
 
 Rules:
 

@@ -118,3 +118,45 @@ test("submits an individual guess", () => {
 
   expect(submitAction).toHaveBeenCalledWith({ type: "submit_individual_guess", guess: 10 });
 });
+
+test("shows individual live guess dots when the server reveals drafts", () => {
+  const component = render(
+    <TestContext
+      gameState={{
+        ...InitialGameState(),
+        gameType: GameType.Individual,
+        roundPhase: RoundPhase.MakeGuess,
+        spectrumTarget: 8,
+        psychicIds: ["psychic1"],
+        individualDraftGuesses: {
+          player1: 12,
+        },
+        players: {
+          psychic1: {
+            name: "Psychic",
+            team: Team.Unset,
+            isModerator: false,
+            isRepresentative: false,
+            isObserver: false,
+          },
+          player1: {
+            name: "Player 1",
+            team: Team.Unset,
+            isModerator: false,
+            isRepresentative: false,
+            isObserver: false,
+          },
+        },
+        viewer: {
+          ...InitialGameState().viewer,
+          isCurrentPsychic: true,
+        },
+      }}
+      playerId="psychic1"
+    >
+      <MakeGuess />
+    </TestContext>
+  );
+
+  expect(component.getByTitle("Player 1")).toBeTruthy();
+});

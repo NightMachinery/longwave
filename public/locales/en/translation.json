@@ -28,6 +28,7 @@
     "clue_quota": "Clue quota",
     "psychic_reroll_limit": "Psychic reroll limit",
     "individual_clue_giver_target": "Rounds as clue giver",
+    "individual_live_guesses": "Clue givers see players guessing in real-time",
     "reroll_prompt_limited": "Reroll prompt ({{count}} left)",
     "game_settings": "Game settings",
     "wordpack": "Wordpack",

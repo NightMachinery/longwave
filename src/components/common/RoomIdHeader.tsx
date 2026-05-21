@@ -302,22 +302,40 @@ function GameSettingsPanel(props: { onBack: () => void }) {
         </button>
       </div>
       {gameState.gameType === GameType.Individual && (
-        <div style={{ margin: 8 }}>
-          {t("roomidheader.individual_clue_giver_target", "Rounds as clue giver")}:{" "}
-          {gameState.individualClueGiverTarget}
-          <button
-            type="button"
-            onClick={() => updateIntegerSetting("individualClueGiverTarget", -1)}
-          >
-            -
-          </button>
-          <button
-            type="button"
-            onClick={() => updateIntegerSetting("individualClueGiverTarget", 1)}
-          >
-            +
-          </button>
-        </div>
+        <>
+          <div style={{ margin: 8 }}>
+            {t("roomidheader.individual_clue_giver_target", "Rounds as clue giver")}:{" "}
+            {gameState.individualClueGiverTarget}
+            <button
+              type="button"
+              onClick={() => updateIntegerSetting("individualClueGiverTarget", -1)}
+            >
+              -
+            </button>
+            <button
+              type="button"
+              onClick={() => updateIntegerSetting("individualClueGiverTarget", 1)}
+            >
+              +
+            </button>
+          </div>
+          <label style={{ display: "block", margin: 8 }}>
+            <input
+              type="checkbox"
+              checked={gameState.individualClueGiverCanSeeLiveGuesses}
+              onChange={(event) =>
+                submitAction({
+                  type: "set_individual_live_guesses",
+                  individualClueGiverCanSeeLiveGuesses: event.target.checked,
+                })
+              }
+            />{" "}
+            {t(
+              "roomidheader.individual_live_guesses",
+              "Clue givers see players guessing in real-time"
+            )}
+          </label>
+        </>
       )}
       <div style={{ margin: 8, cursor: "pointer" }} tabIndex={0} onClick={props.onBack}>
         {t("roomidheader.back", "Back")}

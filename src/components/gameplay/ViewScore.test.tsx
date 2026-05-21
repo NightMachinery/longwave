@@ -69,6 +69,10 @@ test("shows Individual average score and tied winners", () => {
           bob: 10,
           carol: 0,
         },
+        individualDraftGuesses: {
+          bob: 10,
+          carol: 0,
+        },
         individualScores: {
           alice: 2,
           bob: 2,
@@ -120,5 +124,7 @@ test("shows Individual average score and tied winners", () => {
 
   expect(component.getByText("Alice scores 2.0 points.")).toBeTruthy();
   expect(component.getByText("Winner: Alice, Bob")).toBeTruthy();
+  expect(component.getByTitle("Bob")).toBeTruthy();
+  expect(component.getByTitle("Carol")).toBeTruthy();
   expect(component.getByText(/coffee/)).toBeTruthy();
 });

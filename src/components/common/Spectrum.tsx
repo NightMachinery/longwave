@@ -7,12 +7,20 @@ import { GetContrastingText } from "./GetContrastingText";
 import { useTranslation } from "react-i18next";
 import { WordpackCard } from "../../state/Wordpack";
 
+export type SpectrumDotMarker = {
+  playerId: string;
+  name: string;
+  value: number;
+  color: string;
+};
+
 export function Spectrum(props: {
   spectrumCard: WordpackCard;
   handleValue?: number;
   targetValue?: number;
   psychicTargetValue?: number;
   guessingValue?: number;
+  dotMarkers?: SpectrumDotMarker[];
   onChange?: (newValue: number) => void;
 }) {
   const { t } = useTranslation();
@@ -92,6 +100,7 @@ export function Spectrum(props: {
                 label={t("spectrum.psychic_target")}
               />
             )}
+            <PlayerDotMarkers markers={props.dotMarkers ?? []} />
             <Slider
               min={0}
               max={20}
@@ -115,10 +124,50 @@ export function Spectrum(props: {
   );
 }
 
+function PlayerDotMarkers(props: { markers: SpectrumDotMarker[] }) {
+  const grouped = props.markers.reduce<Record<number, SpectrumDotMarker[]>>((acc, marker) => {
+    if (!acc[marker.value]) {
+      acc[marker.value] = [];
+    }
+    acc[marker.value].push(marker);
+    return acc;
+  }, {});
+
+  return (
+    <>
+      {Object.entries(grouped).flatMap(([rawValue, markers]) =>
+        markers
+          .slice()
+          .sort((left, right) => left.name.localeCompare(right.name))
+          .map((marker, index) => (
+            <span
+              key={marker.playerId}
+              title={marker.name}
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                left: `${(Number(rawValue) / 20) * 100}%`,
+                top: -11 - index * 8,
+                width: 7,
+                height: 7,
+                borderRadius: "50%",
+                transform: "translateX(-3.5px)",
+                backgroundColor: marker.color,
+                border: "1px solid rgba(255,255,255,0.88)",
+                boxShadow: "0 1px 3px rgba(17,24,39,0.35)",
+                zIndex: 2,
+                pointerEvents: "none",
+              }}
+            />
+          ))
+      )}
+    </>
+  );
+}
+
 function TrueTargetMarker(props: { value: number; label: string }) {
   const filterId = `liquid-glass-target-${props.label.replace(/[^a-z0-9]+/gi, "-")}-${props.value}`;
   const bodyGradientId = `${filterId}-body`;
-  const glintGradientId = `${filterId}-glint`;
 
   return (
     <>
@@ -139,77 +188,44 @@ function TrueTargetMarker(props: { value: number; label: string }) {
       </span>
       <svg
         aria-hidden="true"
-        viewBox="0 0 26 26"
+        viewBox="0 0 18 18"
         style={{
           position: "absolute",
           left: `${(props.value / 20) * 100}%`,
-          top: -9,
-          width: 26,
-          height: 26,
-          transform: "translateX(-13px)",
+          top: 0,
+          width: 18,
+          height: 18,
+          transform: "translateX(-9px)",
           zIndex: 1,
           pointerEvents: "none",
           overflow: "visible",
         }}
       >
         <defs>
-          <radialGradient id={bodyGradientId} cx="34%" cy="24%" r="72%">
+          <radialGradient id={bodyGradientId} cx="50%" cy="50%" r="64%">
             <stop offset="0%" stopColor="rgba(255,255,255,0.94)" />
-            <stop offset="34%" stopColor="rgba(255,255,255,0.48)" />
-            <stop offset="68%" stopColor="rgba(255,255,255,0.18)" />
+            <stop offset="38%" stopColor="rgba(255,255,255,0.46)" />
+            <stop offset="72%" stopColor="rgba(255,255,255,0.16)" />
             <stop offset="100%" stopColor="rgba(255,255,255,0.06)" />
           </radialGradient>
-          <linearGradient id={glintGradientId} x1="5" y1="3" x2="20" y2="24">
-            <stop offset="0%" stopColor="rgba(255,255,255,0.92)" />
-            <stop offset="45%" stopColor="rgba(255,255,255,0.16)" />
-            <stop offset="100%" stopColor="rgba(255,255,255,0.34)" />
-          </linearGradient>
           <filter id={filterId} x="-35%" y="-35%" width="170%" height="170%">
-            <feTurbulence
-              type="fractalNoise"
-              baseFrequency="0.055 0.11"
-              numOctaves="2"
-              seed={props.value + 7}
-              result="texture"
-            />
-            <feDisplacementMap in="SourceGraphic" in2="texture" scale="1.15" xChannelSelector="R" yChannelSelector="G" result="liquid" />
-            <feGaussianBlur in="liquid" stdDeviation="0.16" result="softLiquid" />
-            <feDropShadow dx="0" dy="4" stdDeviation="3" floodColor="rgba(17,24,39,0.18)" />
+            <feGaussianBlur in="SourceGraphic" stdDeviation="0.12" result="softLiquid" />
+            <feDropShadow dx="0" dy="2.5" stdDeviation="2.1" floodColor="rgba(17,24,39,0.2)" />
             <feComposite in="softLiquid" in2="SourceGraphic" operator="over" />
           </filter>
         </defs>
         <circle
-          cx="13"
-          cy="13"
-          r="12.35"
+          cx="9"
+          cy="9"
+          r="8.35"
           fill="rgba(100,116,139,0.14)"
           stroke="rgba(17,24,39,0.26)"
-          strokeWidth="0.75"
+          strokeWidth="0.65"
         />
-        <circle cx="13" cy="13" r="12" fill={`url(#${bodyGradientId})`} filter={`url(#${filterId})`} />
-        <circle cx="13" cy="13" r="11.5" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="0.9" />
-        <path
-          d="M4.2 12.6C4.2 7.9 8 4.1 12.8 4.1"
-          fill="none"
-          stroke="rgba(17,24,39,0.18)"
-          strokeWidth="1.05"
-          strokeLinecap="round"
-        />
-        <path
-          d="M7.1 7.2C9.1 4.9 12.5 4.1 15.4 5.3"
-          fill="none"
-          stroke={`url(#${glintGradientId})`}
-          strokeWidth="2.1"
-          strokeLinecap="round"
-          opacity="0.9"
-        />
-        <path
-          d="M6.1 17.3C8.6 20.4 14.6 22.1 19.8 17.9"
-          fill="none"
-          stroke="rgba(255,255,255,0.22)"
-          strokeWidth="3.2"
-          strokeLinecap="round"
-        />
+        <circle cx="9" cy="9" r="8" fill={`url(#${bodyGradientId})`} filter={`url(#${filterId})`} />
+        <circle cx="9" cy="9" r="7.45" fill="none" stroke="rgba(255,255,255,0.72)" strokeWidth="0.8" />
+        <circle cx="9" cy="9" r="5.1" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="1.9" />
+        <circle cx="9" cy="9" r="2.55" fill="rgba(255,255,255,0.26)" />
       </svg>
     </>
   );

@@ -6,6 +6,7 @@ import { Button } from "../common/Button";
 import { GameModelContext } from "../../state/GameModelContext";
 import { RecordEvent } from "../../TrackEvent";
 import { useTranslation } from "react-i18next";
+import { buildIndividualGuessMarkers } from "./IndividualGuessMarkers";
 
 export function MakeGuess() {
   const { t } = useTranslation();
@@ -24,6 +25,10 @@ export function MakeGuess() {
         !gameState.psychicIds.includes(playerId)
     ).length;
     const hasSubmitted = ownIndividualGuess !== undefined;
+    const dotMarkers = buildIndividualGuessMarkers(
+      gameState.individualDraftGuesses,
+      gameState.players
+    );
 
     return (
       <div>
@@ -34,9 +39,11 @@ export function MakeGuess() {
             gameState.viewer.isCurrentPsychic ? gameState.spectrumTarget : undefined
           }
           guessingValue={hasSubmitted && ownIndividualGuess >= 0 ? ownIndividualGuess : undefined}
+          dotMarkers={dotMarkers}
           onChange={(guess: number) => {
             if (gameState.viewer.canSubmitGuess) {
               setIndividualGuess(guess);
+              submitAction({ type: "set_individual_draft_guess", guess });
             }
           }}
         />

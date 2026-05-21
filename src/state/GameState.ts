@@ -130,8 +130,10 @@ export interface GameState {
   psychicRerollsUsed: number;
   individualScores: { [playerId: string]: number };
   individualGuesses: { [playerId: string]: number };
+  individualDraftGuesses: { [playerId: string]: number };
   clueGiverCounts: { [playerId: string]: number };
   individualClueGiverTarget: number;
+  individualClueGiverCanSeeLiveGuesses: boolean;
   randomizeTeams: boolean;
   viewer: ViewerState;
 }
@@ -167,8 +169,10 @@ export function InitialGameState(deckLanguage: string = "en"): GameState {
     psychicRerollsUsed: 0,
     individualScores: {},
     individualGuesses: {},
+    individualDraftGuesses: {},
     clueGiverCounts: {},
-    individualClueGiverTarget: 1,
+    individualClueGiverTarget: 3,
+    individualClueGiverCanSeeLiveGuesses: true,
     randomizeTeams: true,
     viewer: {
       playerId: "",

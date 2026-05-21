@@ -13,12 +13,14 @@ export type RoomAction =
   | { type: "set_clue_quota"; clueQuota: number }
   | { type: "set_psychic_reroll_limit"; psychicRerollLimit: number }
   | { type: "set_individual_clue_giver_target"; individualClueGiverTarget: number }
+  | { type: "set_individual_live_guesses"; individualClueGiverCanSeeLiveGuesses: boolean }
   | { type: "set_randomize_teams"; value: boolean }
   | { type: "randomize_teams" }
   | { type: "submit_clue"; clue: string }
   | { type: "set_guess"; guess: number }
   | { type: "submit_guess" }
   | { type: "submit_individual_guess"; guess: number }
+  | { type: "set_individual_draft_guess"; guess: number }
   | { type: "submit_counterguess"; counterGuess: "left" | "right" | "exact" }
   | { type: "set_moderator"; playerId: string; value: boolean }
   | { type: "set_representative"; playerId: string; value: boolean }
@@ -193,9 +195,14 @@ export function normalizeGameStatePayload(gameState: Partial<GameState>): GameSt
     previousGameResult: gameState.previousGameResult ?? null,
     individualScores: gameState.individualScores ?? initialState.individualScores,
     individualGuesses: gameState.individualGuesses ?? initialState.individualGuesses,
+    individualDraftGuesses:
+      gameState.individualDraftGuesses ?? initialState.individualDraftGuesses,
     clueGiverCounts: gameState.clueGiverCounts ?? initialState.clueGiverCounts,
     individualClueGiverTarget:
       gameState.individualClueGiverTarget ?? initialState.individualClueGiverTarget,
+    individualClueGiverCanSeeLiveGuesses:
+      gameState.individualClueGiverCanSeeLiveGuesses ??
+      initialState.individualClueGiverCanSeeLiveGuesses,
     randomizeTeams: gameState.randomizeTeams ?? initialState.randomizeTeams,
     viewer: {
       ...initialState.viewer,

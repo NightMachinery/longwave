@@ -29,7 +29,8 @@
     "game_settings": "Game settings",
     "wordpack": "Wordpack",
     "back": "Back",
-    "individual_clue_giver_target": "Rounds as clue giver"
+    "individual_clue_giver_target": "Rounds as clue giver",
+    "individual_live_guesses": "Clue givers see players guessing in real-time"
   },
   "spectrum": {
     "guessing": "Indovinando...",
