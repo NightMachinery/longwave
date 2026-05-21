@@ -178,8 +178,23 @@ function TrueTargetMarker(props: { value: number; label: string }) {
             <feComposite in="softLiquid" in2="SourceGraphic" operator="over" />
           </filter>
         </defs>
+        <circle
+          cx="13"
+          cy="13"
+          r="12.35"
+          fill="rgba(100,116,139,0.14)"
+          stroke="rgba(17,24,39,0.26)"
+          strokeWidth="0.75"
+        />
         <circle cx="13" cy="13" r="12" fill={`url(#${bodyGradientId})`} filter={`url(#${filterId})`} />
         <circle cx="13" cy="13" r="11.5" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="0.9" />
+        <path
+          d="M4.2 12.6C4.2 7.9 8 4.1 12.8 4.1"
+          fill="none"
+          stroke="rgba(17,24,39,0.18)"
+          strokeWidth="1.05"
+          strokeLinecap="round"
+        />
         <path
           d="M7.1 7.2C9.1 4.9 12.5 4.1 15.4 5.3"
           fill="none"
