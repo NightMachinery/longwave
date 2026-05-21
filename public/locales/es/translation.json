@@ -28,7 +28,8 @@
     "clue_quota": "Clue quota",
     "game_settings": "Game settings",
     "wordpack": "Wordpack",
-    "back": "Back"
+    "back": "Back",
+    "individual_clue_giver_target": "Rounds as clue giver"
   },
   "spectrum": {
     "guessing": "Decidiendo...",
@@ -79,7 +80,9 @@
     "waiting_guessing_team": "Esperando a que el {{guessingteam}} decida...",
     "invite_other_players": "Invita a otros jugadores a unirse a la partida.",
     "share_game_url": "Comparte esta URL con ellos: {{game_url}}",
-    "guess_for_team": "Enviar la respuesta del {{teamname}}"
+    "guess_for_team": "Enviar la respuesta del {{teamname}}",
+    "waiting_individual_guesses": "Waiting for guesses: {{submitted}}/{{required}} submitted.",
+    "submit_individual_guess": "Submit your guess"
   },
   "previousturnresult": {
     "previous_game": "Turno anterior",
@@ -91,14 +94,18 @@
     "card_remaining": "Tarjetas restantes",
     "coop_score": "Puntuación cooperativa",
     "points": "PUNTOS",
-    "observers": "Observers"
+    "observers": "Observers",
+    "individual": "Individual",
+    "standings": "Standings",
+    "clue_giver_progress": "Clue giver {{count}}/{{target}}"
   },
   "setupgame": {
     "standard_game": "Estándar (por equipos): 4+ jugadores",
     "coop_game": "Cooperativo: 2+ jugadores",
     "free_game": "Partida libre: 2+ jugadores",
     "waiting_for_mod": "Waiting for a moderator to choose a mode.",
-    "wordpack": "Wordpack"
+    "wordpack": "Wordpack",
+    "individual_game": "Individual: 3+ Players"
   },
   "viewscore": {
     "player_clue": "Pista de {{givername}}",
@@ -115,7 +122,10 @@
     "draw_next_card": "Roba la siguiente carta de espectro",
     "score": "Puntuación",
     "got": "obtiene",
-    "play_again": "Play again"
+    "play_again": "Play again",
+    "individual_round_score": "{{name}} scores {{score}} points.",
+    "individual_winners": "Winner: {{winners}}",
+    "standings": "Standings"
   },
   "playercard": {
     "creator": "Creator",
@@ -144,5 +154,8 @@
     "stale_link": "This room link has expired. Ask a moderator for the latest link.",
     "join_failed": "Could not connect to this room right now.",
     "return_home": "Return home"
+  },
+  "previousgameresult": {
+    "individual": "Previous Individual winner: {{winner}}."
   }
 }

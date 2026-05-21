@@ -21,10 +21,17 @@ export function PreviousGameResultBanner() {
           leftScore: result.leftScore,
           rightScore: result.rightScore,
         })
-      : t("previousgameresult.coop", {
-          defaultValue: "Previous game score: {{score}} points.",
-          score: result.coopScore,
-        });
+      : result.gameType === GameType.Individual
+        ? t("previousgameresult.individual", {
+            defaultValue: "Previous Individual winner: {{winner}}.",
+            winner: (result.winnerIds ?? [])
+              .map((playerId) => gameState.players[playerId]?.name ?? playerId)
+              .join(", "),
+          })
+        : t("previousgameresult.coop", {
+            defaultValue: "Previous game score: {{score}} points.",
+            score: result.coopScore,
+          });
 
   return (
     <div

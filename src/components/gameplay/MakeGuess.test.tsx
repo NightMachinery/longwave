@@ -1,6 +1,6 @@
-import { InitialGameState, RoundPhase, Team } from "../../state/GameState";
+import { GameType, InitialGameState, RoundPhase, Team } from "../../state/GameState";
 import { MakeGuess } from "./MakeGuess";
-import { render } from "@testing-library/react";
+import { fireEvent, render } from "@testing-library/react";
 import { TestContext } from "./TestContext";
 
 test("shows the submitted clues", () => {
@@ -66,4 +66,55 @@ test("shows psychics the true target during guessing", () => {
   );
 
   expect(component.getByText("True target")).not.toBeNull();
+});
+
+test("submits an individual guess", () => {
+  const submitAction = jest.fn();
+  const component = render(
+    <TestContext
+      gameState={{
+        ...InitialGameState(),
+        gameType: GameType.Individual,
+        roundPhase: RoundPhase.MakeGuess,
+        psychicIds: ["psychic1"],
+        players: {
+          psychic1: {
+            name: "Psychic",
+            team: Team.Unset,
+            isModerator: false,
+            isRepresentative: false,
+            isObserver: false,
+          },
+          player1: {
+            name: "Player 1",
+            team: Team.Unset,
+            isModerator: false,
+            isRepresentative: false,
+            isObserver: false,
+          },
+        },
+        clues: [
+          {
+            authorId: "psychic1",
+            authorName: "Psychic",
+            text: "coffee",
+            order: 0,
+          },
+        ],
+        viewer: {
+          ...InitialGameState().viewer,
+          canSubmitGuess: true,
+          canSetGuess: true,
+        },
+      }}
+      playerId="player1"
+      submitAction={submitAction}
+    >
+      <MakeGuess />
+    </TestContext>
+  );
+
+  fireEvent.click(component.getByRole("button", { name: "Submit your guess" }));
+
+  expect(submitAction).toHaveBeenCalledWith({ type: "submit_individual_guess", guess: 10 });
 });

@@ -24,6 +24,9 @@ export function Scoreboard() {
   return (
     <CenteredColumn style={style}>
       {gameState.gameType === GameType.Freeplay && <em>{t("scoreboard.free_play")}</em>}
+      {gameState.gameType === GameType.Individual && (
+        <em>{t("scoreboard.individual", "Individual")}</em>
+      )}
       {gameState.gameType === GameType.Cooperative && (
         <>
           <em>
@@ -39,6 +42,8 @@ export function Scoreboard() {
           <TeamColumn team={Team.Left} score={gameState.leftScore} submitAction={submitAction} />
           <TeamColumn team={Team.Right} score={gameState.rightScore} submitAction={submitAction} />
         </CenteredRow>
+      ) : gameState.gameType === GameType.Individual ? (
+        <IndividualScoreList submitAction={submitAction} />
       ) : (
         <CenteredColumn style={{ alignItems: "stretch", gap: 10 }}>
           {Object.keys(gameState.players)
@@ -62,6 +67,43 @@ export function Scoreboard() {
           ))}
         </CenteredColumn>
       )}
+    </CenteredColumn>
+  );
+}
+
+function IndividualScoreList(props: { submitAction: (action: RoomAction) => void }) {
+  const { t } = useTranslation();
+  const { gameState } = useContext(GameModelContext);
+  const activePlayerIds = Object.keys(gameState.players)
+    .filter((playerId) => !gameState.players[playerId].isObserver)
+    .sort((left, right) => {
+      const scoreDelta =
+        (gameState.individualScores[right] ?? 0) - (gameState.individualScores[left] ?? 0);
+      if (scoreDelta !== 0) {
+        return scoreDelta;
+      }
+      return gameState.players[left].name.localeCompare(gameState.players[right].name);
+    });
+
+  return (
+    <CenteredColumn style={{ alignItems: "stretch", gap: 10, width: "100%" }}>
+      <SectionTitle>{t("scoreboard.standings", "Standings")}</SectionTitle>
+      {activePlayerIds.map((playerId) => (
+        <div key={playerId} style={{ marginBottom: 10 }}>
+          <div style={{ marginBottom: 4, fontWeight: 700 }}>
+            {gameState.players[playerId].name}:{" "}
+            {(gameState.individualScores[playerId] ?? 0).toFixed(1)}{" "}
+            {t("scoreboard.points")}
+            {" · "}
+            {t("scoreboard.clue_giver_progress", {
+              defaultValue: "Clue giver {{count}}/{{target}}",
+              count: gameState.clueGiverCounts[playerId] ?? 0,
+              target: gameState.individualClueGiverTarget,
+            })}
+          </div>
+          <PlayerManagementCard playerId={playerId} submitAction={props.submitAction} />
+        </div>
+      ))}
     </CenteredColumn>
   );
 }

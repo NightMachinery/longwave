@@ -27,6 +27,7 @@
     "psychics": "Psychics",
     "clue_quota": "Clue quota",
     "psychic_reroll_limit": "Psychic reroll limit",
+    "individual_clue_giver_target": "Rounds as clue giver",
     "reroll_prompt_limited": "Reroll prompt ({{count}} left)",
     "game_settings": "Game settings",
     "wordpack": "Wordpack",
@@ -87,12 +88,14 @@
   "makeguess": {
     "players_clue": "{{givername}}'s clue",
     "waiting_guessing_team": "Waiting for {{guessingteam}} to guess...",
+    "waiting_individual_guesses": "Waiting for guesses: {{submitted}}/{{required}} submitted.",
     "invite_other_players": "Invite other players to join the game.",
     "share_game_url": "Share this URL with them: {{game_url}}",
     "copy_game_url": "Copy invite link",
     "copy_success": "Invite link copied.",
     "copy_failed": "Could not copy the invite link. Copy it manually from the URL above.",
-    "guess_for_team": "Submit Guess for {{teamname}}"
+    "guess_for_team": "Submit Guess for {{teamname}}",
+    "submit_individual_guess": "Submit your guess"
   },
   "previousturnresult": {
     "previous_game": "Previous Turn",
@@ -103,6 +106,9 @@
     "last_card": "Last Card!",
     "card_remaining": "Cards remaining",
     "coop_score": "Cooperative Score",
+    "individual": "Individual",
+    "standings": "Standings",
+    "clue_giver_progress": "Clue giver {{count}}/{{target}}",
     "points": "POINTS",
     "observers": "Observers"
   },
@@ -110,6 +116,7 @@
     "standard_game": "Standard (Teams): 4+ Players",
     "coop_game": "Cooperative: 2+ Players",
     "free_game": "Free Play: 2+ Players",
+    "individual_game": "Individual: 3+ Players",
     "waiting_for_mod": "Waiting for a moderator to choose a mode.",
     "wordpack": "Wordpack",
     "wordpacks": "Wordpacks"
@@ -126,6 +133,9 @@
     "reset_game": "Reset game",
     "game_finished": "Game complete",
     "final_score_team": "Your team's final cooperative score",
+    "individual_round_score": "{{name}} scores {{score}} points.",
+    "individual_winners": "Winner: {{winners}}",
+    "standings": "Standings",
     "points": "points",
     "catching_up": "Catchup activated: {{scoringteam}} takes a bonus turn!",
     "catching_up_info": "After a team scores a four-point round, they get a bonus turn if they are still behind the other team",
@@ -159,6 +169,7 @@
   },
   "previousgameresult": {
     "teams": "{{winner}} beat {{loser}}, {{leftScore}}-{{rightScore}}.",
-    "coop": "Previous game score: {{score}} points."
+    "coop": "Previous game score: {{score}} points.",
+    "individual": "Previous Individual winner: {{winner}}."
   }
 }

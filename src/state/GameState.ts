@@ -16,6 +16,7 @@ export enum GameType {
   Teams,
   Cooperative,
   Freeplay,
+  Individual,
 }
 
 export enum Team {
@@ -78,6 +79,8 @@ export type PreviousGameResult = {
   leftScore: number;
   rightScore: number;
   coopScore: number;
+  individualScores?: { [playerId: string]: number };
+  winnerIds?: string[];
 };
 
 export type ViewerState = {
@@ -125,6 +128,10 @@ export interface GameState {
   clueQuota: number;
   psychicRerollLimit: number;
   psychicRerollsUsed: number;
+  individualScores: { [playerId: string]: number };
+  individualGuesses: { [playerId: string]: number };
+  clueGiverCounts: { [playerId: string]: number };
+  individualClueGiverTarget: number;
   randomizeTeams: boolean;
   viewer: ViewerState;
 }
@@ -158,6 +165,10 @@ export function InitialGameState(deckLanguage: string = "en"): GameState {
     clueQuota: 1,
     psychicRerollLimit: 2,
     psychicRerollsUsed: 0,
+    individualScores: {},
+    individualGuesses: {},
+    clueGiverCounts: {},
+    individualClueGiverTarget: 1,
     randomizeTeams: true,
     viewer: {
       playerId: "",

@@ -41,6 +41,11 @@ export function SetupGame() {
           onClick={() => startGame(GameType.Freeplay)}
           disabled={!canManageRoom}
         />
+        <Button
+          text={t("setupgame.individual_game", "Individual: 3+ Players")}
+          onClick={() => startGame(GameType.Individual)}
+          disabled={!canManageRoom}
+        />
       </CenteredRow>
     </CenteredColumn>
   );

@@ -32,9 +32,14 @@ export function ViewScore() {
       ((gameState.leftScore >= 10 && gameState.leftScore > gameState.rightScore) ||
         (gameState.rightScore >= 10 && gameState.rightScore > gameState.leftScore))) ||
     (gameState.gameType === GameType.Cooperative &&
-      gameState.turnsTaken >= 7 + gameState.coopBonusTurns);
+      gameState.turnsTaken >= 7 + gameState.coopBonusTurns) ||
+    (gameState.gameType === GameType.Individual && isIndividualGameOver(gameState));
 
   useEndGameFanfare(isGameOver);
+
+  if (gameState.gameType === GameType.Individual) {
+    return <IndividualScoreReveal isGameOver={isGameOver} />;
+  }
 
   return (
     <div className={isGameOver ? "end-game-reveal" : undefined}>
@@ -71,6 +76,141 @@ export function ViewScore() {
       </CenteredColumn>
     </div>
   );
+}
+
+function IndividualScoreReveal(props: { isGameOver: boolean }) {
+  const { t } = useTranslation();
+  const { gameState, spectrumCard, submitAction } = useContext(GameModelContext);
+  const clueGiverId = gameState.psychicIds[0];
+  const clueGiverName =
+    clueGiverId && gameState.players[clueGiverId]
+      ? gameState.players[clueGiverId].name
+      : t("gamestate.the_player");
+  const guesserIds = Object.keys(gameState.individualGuesses)
+    .filter((playerId) => gameState.individualGuesses[playerId] >= 0)
+    .sort((left, right) =>
+      (gameState.players[left]?.name ?? left).localeCompare(gameState.players[right]?.name ?? right)
+    );
+  const roundScores = guesserIds.map((playerId) =>
+    GetScore(gameState.spectrumTarget, gameState.individualGuesses[playerId])
+  );
+  const average =
+    roundScores.length === 0
+      ? 0
+      : roundScores.reduce((total, score) => total + score, 0) / roundScores.length;
+  const winnerIds = individualWinnerIds(gameState);
+
+  return (
+    <div className={props.isGameOver ? "end-game-reveal" : undefined}>
+      <Spectrum spectrumCard={spectrumCard} targetValue={gameState.spectrumTarget} />
+      <CenteredColumn>
+        {gameState.clues.map((clue) => (
+          <div key={`${clue.authorId}-${clue.order}`}>
+            <strong>{clue.authorName}</strong>: {clue.text}
+          </div>
+        ))}
+        <div>
+          {t("viewscore.individual_round_score", {
+            defaultValue: "{{name}} scores {{score}} points.",
+            name: clueGiverName,
+            score: average.toFixed(1),
+          })}
+        </div>
+        <div>
+          {guesserIds.map((playerId) => (
+            <div key={playerId}>
+              <strong>{gameState.players[playerId]?.name ?? playerId}</strong>:{" "}
+              {gameState.individualGuesses[playerId]} (
+              {GetScore(gameState.spectrumTarget, gameState.individualGuesses[playerId])}{" "}
+              {t("viewscore.points")})
+            </div>
+          ))}
+        </div>
+        {props.isGameOver ? (
+          <>
+            <div className="end-game-result" role="status">
+              <div className="end-game-title">{t("viewscore.game_finished")}</div>
+              <div className="end-game-score">
+                {t("viewscore.individual_winners", {
+                  defaultValue: "Winner: {{winners}}",
+                  winners: winnerIds
+                    .map((playerId) => gameState.players[playerId]?.name ?? playerId)
+                    .join(", "),
+                })}
+              </div>
+            </div>
+            <IndividualStandings />
+            <PlayAgainButton />
+          </>
+        ) : (
+          <>
+            <IndividualStandings />
+            <Button
+              text={t("viewscore.draw_next_card")}
+              onClick={() => submitAction({ type: "start_round" })}
+              disabled={!gameState.viewer.canStartRound}
+            />
+          </>
+        )}
+      </CenteredColumn>
+    </div>
+  );
+}
+
+function IndividualStandings() {
+  const { t } = useTranslation();
+  const { gameState } = useContext(GameModelContext);
+  const playerIds = Object.keys(gameState.players)
+    .filter((playerId) => !gameState.players[playerId].isObserver)
+    .sort((left, right) => {
+      const scoreDelta =
+        (gameState.individualScores[right] ?? 0) - (gameState.individualScores[left] ?? 0);
+      if (scoreDelta !== 0) {
+        return scoreDelta;
+      }
+      return gameState.players[left].name.localeCompare(gameState.players[right].name);
+    });
+
+  return (
+    <div>
+      <div style={{ fontWeight: 700 }}>{t("viewscore.standings", "Standings")}</div>
+      {playerIds.map((playerId) => (
+        <div key={playerId}>
+          {gameState.players[playerId].name}: {(gameState.individualScores[playerId] ?? 0).toFixed(1)}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function isIndividualGameOver(gameState: { players: Record<string, { isObserver: boolean }>; clueGiverCounts: Record<string, number>; individualClueGiverTarget: number }) {
+  const activePlayerIds = Object.keys(gameState.players).filter(
+    (playerId) => !gameState.players[playerId].isObserver
+  );
+  if (activePlayerIds.length < 2) {
+    return false;
+  }
+  return activePlayerIds.every(
+    (playerId) => (gameState.clueGiverCounts[playerId] ?? 0) >= gameState.individualClueGiverTarget
+  );
+}
+
+function individualWinnerIds(gameState: { players: Record<string, { isObserver: boolean }>; individualScores: Record<string, number> }) {
+  const activePlayerIds = Object.keys(gameState.players).filter(
+    (playerId) => !gameState.players[playerId].isObserver
+  );
+  let bestScore = Number.NEGATIVE_INFINITY;
+  let winners: string[] = [];
+  activePlayerIds.forEach((playerId) => {
+    const score = gameState.individualScores[playerId] ?? 0;
+    if (score > bestScore) {
+      bestScore = score;
+      winners = [playerId];
+    } else if (score === bestScore) {
+      winners.push(playerId);
+    }
+  });
+  return winners;
 }
 
 function NextTurnOrEndGame() {

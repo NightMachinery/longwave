@@ -12,11 +12,13 @@ export type RoomAction =
   | { type: "set_psychic_count"; psychicCount: number }
   | { type: "set_clue_quota"; clueQuota: number }
   | { type: "set_psychic_reroll_limit"; psychicRerollLimit: number }
+  | { type: "set_individual_clue_giver_target"; individualClueGiverTarget: number }
   | { type: "set_randomize_teams"; value: boolean }
   | { type: "randomize_teams" }
   | { type: "submit_clue"; clue: string }
   | { type: "set_guess"; guess: number }
   | { type: "submit_guess" }
+  | { type: "submit_individual_guess"; guess: number }
   | { type: "submit_counterguess"; counterGuess: "left" | "right" | "exact" }
   | { type: "set_moderator"; playerId: string; value: boolean }
   | { type: "set_representative"; playerId: string; value: boolean }
@@ -189,6 +191,11 @@ export function normalizeGameStatePayload(gameState: Partial<GameState>): GameSt
             clues: gameState.previousTurn.clues ?? [],
           },
     previousGameResult: gameState.previousGameResult ?? null,
+    individualScores: gameState.individualScores ?? initialState.individualScores,
+    individualGuesses: gameState.individualGuesses ?? initialState.individualGuesses,
+    clueGiverCounts: gameState.clueGiverCounts ?? initialState.clueGiverCounts,
+    individualClueGiverTarget:
+      gameState.individualClueGiverTarget ?? initialState.individualClueGiverTarget,
     randomizeTeams: gameState.randomizeTeams ?? initialState.randomizeTeams,
     viewer: {
       ...initialState.viewer,

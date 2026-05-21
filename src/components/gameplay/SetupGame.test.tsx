@@ -1,5 +1,5 @@
 import { fireEvent, render, waitFor } from "@testing-library/react";
-import { InitialGameState } from "../../state/GameState";
+import { GameType, InitialGameState } from "../../state/GameState";
 import { fetchWordpacks } from "../../network/roomApi";
 import { SetupGame } from "./SetupGame";
 import { TestContext } from "./TestContext";
@@ -58,6 +58,43 @@ describe("SetupGame", () => {
     expect(submitAction).toHaveBeenCalledWith({
       type: "set_wordpacks",
       wordpacks: ["English", "Persian"],
+    });
+  });
+
+  it("lets moderators choose Individual mode", async () => {
+    const submitAction = jest.fn();
+    const component = render(
+      <TestContext
+        gameState={{
+          ...InitialGameState(),
+          viewer: {
+            ...InitialGameState().viewer,
+            canManageRoom: true,
+          },
+          players: {
+            mod1: {
+              name: "Mod",
+              team: 0,
+              isModerator: true,
+              isRepresentative: false,
+              isObserver: false,
+            },
+          },
+        }}
+        playerId="mod1"
+        submitAction={submitAction}
+      >
+        <SetupGame />
+      </TestContext>
+    );
+
+    await waitFor(() => expect(mockedFetchWordpacks).toHaveBeenCalled());
+
+    component.getByRole("button", { name: "Individual: 3+ Players" }).click();
+
+    expect(submitAction).toHaveBeenCalledWith({
+      type: "set_game_type",
+      gameType: GameType.Individual,
     });
   });
 });

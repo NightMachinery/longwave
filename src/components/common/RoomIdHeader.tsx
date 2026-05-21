@@ -18,7 +18,7 @@ import { GameModelContext } from "../../state/GameModelContext";
 import { copyTextToClipboard } from "../../utils/copyTextToClipboard";
 import { buildCanonicalRoomUrl, buildMigratedRoomUrl } from "../../utils/roomIdentity";
 import { requestMigrationLink } from "../../network/roomApi";
-import { RoundPhase } from "../../state/GameState";
+import { GameType, RoundPhase } from "../../state/GameState";
 import { useTranslation } from "react-i18next";
 import { WordpackSelector } from "../gameplay/WordpackSelector";
 
@@ -240,7 +240,7 @@ function GameSettingsPanel(props: { onBack: () => void }) {
   const { gameState, submitAction } = useContext(GameModelContext);
 
   const updateIntegerSetting = (
-    field: "psychicCount" | "clueQuota" | "psychicRerollLimit",
+    field: "psychicCount" | "clueQuota" | "psychicRerollLimit" | "individualClueGiverTarget",
     delta: number
   ) => {
     const currentValue = gameState[field];
@@ -250,10 +250,15 @@ function GameSettingsPanel(props: { onBack: () => void }) {
       submitAction({ type: "set_psychic_count", psychicCount: nextValue });
     } else if (field === "clueQuota") {
       submitAction({ type: "set_clue_quota", clueQuota: nextValue });
-    } else {
+    } else if (field === "psychicRerollLimit") {
       submitAction({
         type: "set_psychic_reroll_limit",
         psychicRerollLimit: nextValue,
+      });
+    } else {
+      submitAction({
+        type: "set_individual_clue_giver_target",
+        individualClueGiverTarget: nextValue,
       });
     }
   };
@@ -296,6 +301,24 @@ function GameSettingsPanel(props: { onBack: () => void }) {
           +
         </button>
       </div>
+      {gameState.gameType === GameType.Individual && (
+        <div style={{ margin: 8 }}>
+          {t("roomidheader.individual_clue_giver_target", "Rounds as clue giver")}:{" "}
+          {gameState.individualClueGiverTarget}
+          <button
+            type="button"
+            onClick={() => updateIntegerSetting("individualClueGiverTarget", -1)}
+          >
+            -
+          </button>
+          <button
+            type="button"
+            onClick={() => updateIntegerSetting("individualClueGiverTarget", 1)}
+          >
+            +
+          </button>
+        </div>
+      )}
       <div style={{ margin: 8, cursor: "pointer" }} tabIndex={0} onClick={props.onBack}>
         {t("roomidheader.back", "Back")}
       </div>

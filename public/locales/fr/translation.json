@@ -24,7 +24,8 @@
     "clue_quota": "Clue quota",
     "game_settings": "Game settings",
     "wordpack": "Wordpack",
-    "back": "Back"
+    "back": "Back",
+    "individual_clue_giver_target": "Rounds as clue giver"
   },
   "spectrum": {
     "guessing": "En cours de déduction...",
@@ -75,7 +76,9 @@
     "waiting_guessing_team": "En attente d'une déduction par {{guessingteam}}...",
     "invite_other_players": "Inviter d'autres joueurs à rejoindre la partie.",
     "share_game_url": "Partager cette URL avec eux : {{game_url}}",
-    "guess_for_team": "Envoyer votre déduction pour {{teamname}}"
+    "guess_for_team": "Envoyer votre déduction pour {{teamname}}",
+    "waiting_individual_guesses": "Waiting for guesses: {{submitted}}/{{required}} submitted.",
+    "submit_individual_guess": "Submit your guess"
   },
   "previousturnresult": {
     "previous_game": "Tour précédent",
@@ -87,14 +90,18 @@
     "card_remaining": "Cartes restantes",
     "coop_score": "Score Coopératif",
     "points": "POINTS",
-    "observers": "Observers"
+    "observers": "Observers",
+    "individual": "Individual",
+    "standings": "Standings",
+    "clue_giver_progress": "Clue giver {{count}}/{{target}}"
   },
   "setupgame": {
     "standard_game": "Standard (Équipe) : 4+ Joueurs",
     "coop_game": "Coopératif : 2+ Joueurs",
     "free_game": "Partie Libre : 2+ Joueurs",
     "waiting_for_mod": "Waiting for a moderator to choose a mode.",
-    "wordpack": "Wordpack"
+    "wordpack": "Wordpack",
+    "individual_game": "Individual: 3+ Players"
   },
   "viewscore": {
     "player_clue": "Indice fourni par {{givername}}",
@@ -111,7 +118,10 @@
     "draw_next_card": "Dessiner la carte de plage de valeur suivante",
     "score": "Score",
     "got": "obtient",
-    "play_again": "Play again"
+    "play_again": "Play again",
+    "individual_round_score": "{{name}} scores {{score}} points.",
+    "individual_winners": "Winner: {{winners}}",
+    "standings": "Standings"
   },
   "playercard": {
     "creator": "Creator",
@@ -140,5 +150,8 @@
     "stale_link": "This room link has expired. Ask a moderator for the latest link.",
     "join_failed": "Could not connect to this room right now.",
     "return_home": "Return home"
+  },
+  "previousgameresult": {
+    "individual": "Previous Individual winner: {{winner}}."
   }
 }
