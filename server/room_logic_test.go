@@ -321,3 +321,117 @@ func TestPlayAgainStoresPreviousWinnerResult(t *testing.T) {
 		t.Fatalf("expected scores to reset, got left=%d right=%d", room.LeftScore, room.RightScore)
 	}
 }
+
+func TestIndividualRoundAveragesAllNonObserverGuesses(t *testing.T) {
+	t.Parallel()
+
+	room := InitialRoomState("en")
+	room.GameType = GameTypeIndividual
+	room.RoundPhase = RoundPhaseMakeGuess
+	room.SpectrumTarget = 10
+	room.PsychicIDs = []string{"alice"}
+	room.Players = map[string]PlayerState{
+		"alice": {Name: "Alice"},
+		"bob":   {Name: "Bob"},
+		"carol": {Name: "Carol"},
+		"dana":  {Name: "Dana", IsObserver: true},
+	}
+
+	if err := applyAction(&room, "bob", ActionRequest{Type: "submit_individual_guess", Guess: intPointer(10)}, nil); err != nil {
+		t.Fatalf("expected bob guess to succeed: %v", err)
+	}
+	if room.RoundPhase != RoundPhaseMakeGuess {
+		t.Fatalf("expected round to wait for carol, got phase %v", room.RoundPhase)
+	}
+	if err := applyAction(&room, "carol", ActionRequest{Type: "submit_individual_guess", Guess: intPointer(0)}, nil); err != nil {
+		t.Fatalf("expected carol guess to succeed: %v", err)
+	}
+	if room.RoundPhase != RoundPhaseViewScore {
+		t.Fatalf("expected individual round to reveal after all guesses, got phase %v", room.RoundPhase)
+	}
+	if room.IndividualScores["alice"] != 2 {
+		t.Fatalf("expected clue giver average score 2, got %.2f", room.IndividualScores["alice"])
+	}
+}
+
+func TestIndividualRejectsDuplicateAndClueGiverGuesses(t *testing.T) {
+	t.Parallel()
+
+	room := InitialRoomState("en")
+	room.GameType = GameTypeIndividual
+	room.RoundPhase = RoundPhaseMakeGuess
+	room.PsychicIDs = []string{"alice"}
+	room.Players = map[string]PlayerState{
+		"alice": {Name: "Alice"},
+		"bob":   {Name: "Bob"},
+		"carol": {Name: "Carol"},
+	}
+
+	if err := applyAction(&room, "alice", ActionRequest{Type: "submit_individual_guess", Guess: intPointer(10)}, nil); err == nil {
+		t.Fatalf("expected clue giver guess to fail")
+	}
+	if err := applyAction(&room, "bob", ActionRequest{Type: "submit_individual_guess", Guess: intPointer(10)}, nil); err != nil {
+		t.Fatalf("expected first bob guess to succeed: %v", err)
+	}
+	if err := applyAction(&room, "bob", ActionRequest{Type: "submit_individual_guess", Guess: intPointer(11)}, nil); err == nil {
+		t.Fatalf("expected duplicate bob guess to fail")
+	}
+}
+
+func TestIndividualGameOverUsesCurrentActiveRoster(t *testing.T) {
+	t.Parallel()
+
+	room := InitialRoomState("en")
+	room.GameType = GameTypeIndividual
+	room.RoundPhase = RoundPhaseViewScore
+	room.IndividualClueGiverTarget = 1
+	room.Players = map[string]PlayerState{
+		"alice": {Name: "Alice"},
+		"bob":   {Name: "Bob"},
+		"carol": {Name: "Carol", IsObserver: true},
+	}
+	room.ClueGiverCounts = map[string]int{"alice": 1, "bob": 1, "carol": 0}
+
+	if !isGameOver(&room) {
+		t.Fatalf("expected observers to be ignored by individual game-over check")
+	}
+
+	room.Players["dana"] = PlayerState{Name: "Dana"}
+	normalizeRoomStateShape(&room)
+	if isGameOver(&room) {
+		t.Fatalf("expected active late joiner to extend individual game")
+	}
+}
+
+func TestIndividualSanitizedGuessesHideOtherPlayersBeforeReveal(t *testing.T) {
+	t.Parallel()
+
+	room := InitialRoomState("en")
+	room.GameType = GameTypeIndividual
+	room.RoundPhase = RoundPhaseMakeGuess
+	room.PsychicIDs = []string{"alice"}
+	room.Players = map[string]PlayerState{
+		"alice": {Name: "Alice"},
+		"bob":   {Name: "Bob"},
+		"carol": {Name: "Carol"},
+	}
+	room.IndividualGuesses = map[string]int{"bob": 7, "carol": 12}
+
+	bobView := sanitizeRoomForViewer(room, "ROOM", "bob")
+	if bobView.IndividualGuesses["bob"] != 7 {
+		t.Fatalf("expected bob to see own guess, got %d", bobView.IndividualGuesses["bob"])
+	}
+	if bobView.IndividualGuesses["carol"] != -1 {
+		t.Fatalf("expected bob to see only carol submission status, got %d", bobView.IndividualGuesses["carol"])
+	}
+
+	room.RoundPhase = RoundPhaseViewScore
+	revealView := sanitizeRoomForViewer(room, "ROOM", "bob")
+	if revealView.IndividualGuesses["carol"] != 12 {
+		t.Fatalf("expected reveal to include carol guess, got %d", revealView.IndividualGuesses["carol"])
+	}
+}
+
+func intPointer(value int) *int {
+	return &value
+}

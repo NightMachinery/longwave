@@ -29,6 +29,7 @@ const (
 	GameTypeTeams GameType = iota
 	GameTypeCooperative
 	GameTypeFreeplay
+	GameTypeIndividual
 )
 
 const (
@@ -62,46 +63,52 @@ type TurnSummaryModel struct {
 }
 
 type PreviousGameResult struct {
-	GameType   GameType `json:"gameType"`
-	WinnerTeam Team     `json:"winnerTeam"`
-	LoserTeam  Team     `json:"loserTeam"`
-	LeftScore  int      `json:"leftScore"`
-	RightScore int      `json:"rightScore"`
-	CoopScore  int      `json:"coopScore"`
+	GameType         GameType           `json:"gameType"`
+	WinnerTeam       Team               `json:"winnerTeam"`
+	LoserTeam        Team               `json:"loserTeam"`
+	LeftScore        int                `json:"leftScore"`
+	RightScore       int                `json:"rightScore"`
+	CoopScore        int                `json:"coopScore"`
+	IndividualScores map[string]float64 `json:"individualScores,omitempty"`
+	WinnerIDs        []string           `json:"winnerIds,omitempty"`
 }
 
 type RoomState struct {
-	GameType           GameType               `json:"gameType"`
-	RoundPhase         RoundPhase             `json:"roundPhase"`
-	TurnsTaken         int                    `json:"turnsTaken"`
-	DeckSeed           string                 `json:"deckSeed"`
-	DeckIndex          int                    `json:"deckIndex"`
-	SpectrumTarget     int                    `json:"spectrumTarget"`
-	Clues              []Clue                 `json:"clues"`
-	Guess              int                    `json:"guess"`
-	CounterGuess       string                 `json:"counterGuess"`
-	Players            map[string]PlayerState `json:"players"`
-	PsychicIDs         []string               `json:"psychicIds"`
-	ActingTeam         Team                   `json:"actingTeam"`
-	LeftScore          int                    `json:"leftScore"`
-	RightScore         int                    `json:"rightScore"`
-	CoopScore          int                    `json:"coopScore"`
-	CoopBonusTurns     int                    `json:"coopBonusTurns"`
-	PreviousTurn       *TurnSummaryModel      `json:"previousTurn"`
-	PreviousGameResult *PreviousGameResult    `json:"previousGameResult"`
-	DeckLanguage       string                 `json:"deckLanguage"`
-	Wordpack           string                 `json:"wordpack"`
-	Wordpacks          []string               `json:"wordpacks"`
-	CreatorID          string                 `json:"creatorId"`
-	PsychicCount       int                    `json:"psychicCount"`
-	ClueQuota          int                    `json:"clueQuota"`
-	PsychicRerollLimit int                    `json:"psychicRerollLimit"`
-	PsychicRerollsUsed int                    `json:"psychicRerollsUsed"`
-	RandomizeTeams     *bool                  `json:"randomizeTeams"`
-	TeamsRandomized    bool                   `json:"teamsRandomized,omitempty"`
-	PsychicPickCounts  map[string]int         `json:"psychicPickCounts,omitempty"`
-	MigrationTokens    map[string]string      `json:"migrationTokens,omitempty"`
-	RedirectRoomID     string                 `json:"redirectRoomId,omitempty"`
+	GameType                  GameType               `json:"gameType"`
+	RoundPhase                RoundPhase             `json:"roundPhase"`
+	TurnsTaken                int                    `json:"turnsTaken"`
+	DeckSeed                  string                 `json:"deckSeed"`
+	DeckIndex                 int                    `json:"deckIndex"`
+	SpectrumTarget            int                    `json:"spectrumTarget"`
+	Clues                     []Clue                 `json:"clues"`
+	Guess                     int                    `json:"guess"`
+	CounterGuess              string                 `json:"counterGuess"`
+	Players                   map[string]PlayerState `json:"players"`
+	PsychicIDs                []string               `json:"psychicIds"`
+	ActingTeam                Team                   `json:"actingTeam"`
+	LeftScore                 int                    `json:"leftScore"`
+	RightScore                int                    `json:"rightScore"`
+	CoopScore                 int                    `json:"coopScore"`
+	CoopBonusTurns            int                    `json:"coopBonusTurns"`
+	PreviousTurn              *TurnSummaryModel      `json:"previousTurn"`
+	PreviousGameResult        *PreviousGameResult    `json:"previousGameResult"`
+	DeckLanguage              string                 `json:"deckLanguage"`
+	Wordpack                  string                 `json:"wordpack"`
+	Wordpacks                 []string               `json:"wordpacks"`
+	CreatorID                 string                 `json:"creatorId"`
+	PsychicCount              int                    `json:"psychicCount"`
+	ClueQuota                 int                    `json:"clueQuota"`
+	PsychicRerollLimit        int                    `json:"psychicRerollLimit"`
+	PsychicRerollsUsed        int                    `json:"psychicRerollsUsed"`
+	IndividualScores          map[string]float64     `json:"individualScores,omitempty"`
+	IndividualGuesses         map[string]int         `json:"individualGuesses,omitempty"`
+	ClueGiverCounts           map[string]int         `json:"clueGiverCounts,omitempty"`
+	IndividualClueGiverTarget int                    `json:"individualClueGiverTarget"`
+	RandomizeTeams            *bool                  `json:"randomizeTeams"`
+	TeamsRandomized           bool                   `json:"teamsRandomized,omitempty"`
+	PsychicPickCounts         map[string]int         `json:"psychicPickCounts,omitempty"`
+	MigrationTokens           map[string]string      `json:"migrationTokens,omitempty"`
+	RedirectRoomID            string                 `json:"redirectRoomId,omitempty"`
 }
 
 type ViewerState struct {
@@ -133,35 +140,39 @@ func InitialRoomState(deckLanguage string) RoomState {
 	}
 	wordpack := normalizeWordpack(deckLanguage)
 	return RoomState{
-		GameType:           GameTypeTeams,
-		RoundPhase:         RoundPhaseSetupGame,
-		TurnsTaken:         -1,
-		DeckSeed:           randomDeckSeed(),
-		DeckIndex:          0,
-		SpectrumTarget:     randomSpectrumTarget(),
-		Clues:              []Clue{},
-		Guess:              10,
-		CounterGuess:       "left",
-		Players:            map[string]PlayerState{},
-		PsychicIDs:         []string{},
-		ActingTeam:         TeamUnset,
-		LeftScore:          0,
-		RightScore:         0,
-		CoopScore:          0,
-		CoopBonusTurns:     0,
-		PreviousTurn:       nil,
-		PreviousGameResult: nil,
-		DeckLanguage:       deckLanguage,
-		Wordpack:           wordpack,
-		Wordpacks:          []string{wordpack},
-		CreatorID:          "",
-		PsychicCount:       1,
-		ClueQuota:          1,
-		PsychicRerollLimit: 2,
-		PsychicRerollsUsed: 0,
-		RandomizeTeams:     boolPointer(true),
-		PsychicPickCounts:  map[string]int{},
-		MigrationTokens:    map[string]string{},
+		GameType:                  GameTypeTeams,
+		RoundPhase:                RoundPhaseSetupGame,
+		TurnsTaken:                -1,
+		DeckSeed:                  randomDeckSeed(),
+		DeckIndex:                 0,
+		SpectrumTarget:            randomSpectrumTarget(),
+		Clues:                     []Clue{},
+		Guess:                     10,
+		CounterGuess:              "left",
+		Players:                   map[string]PlayerState{},
+		PsychicIDs:                []string{},
+		ActingTeam:                TeamUnset,
+		LeftScore:                 0,
+		RightScore:                0,
+		CoopScore:                 0,
+		CoopBonusTurns:            0,
+		PreviousTurn:              nil,
+		PreviousGameResult:        nil,
+		DeckLanguage:              deckLanguage,
+		Wordpack:                  wordpack,
+		Wordpacks:                 []string{wordpack},
+		CreatorID:                 "",
+		PsychicCount:              1,
+		ClueQuota:                 1,
+		PsychicRerollLimit:        2,
+		PsychicRerollsUsed:        0,
+		IndividualScores:          map[string]float64{},
+		IndividualGuesses:         map[string]int{},
+		ClueGiverCounts:           map[string]int{},
+		IndividualClueGiverTarget: 1,
+		RandomizeTeams:            boolPointer(true),
+		PsychicPickCounts:         map[string]int{},
+		MigrationTokens:           map[string]string{},
 	}
 }
 
@@ -224,6 +235,18 @@ func normalizeRoomStateShape(room *RoomState) {
 	}
 	if room.PsychicPickCounts == nil {
 		room.PsychicPickCounts = map[string]int{}
+	}
+	if room.IndividualScores == nil {
+		room.IndividualScores = map[string]float64{}
+	}
+	if room.IndividualGuesses == nil {
+		room.IndividualGuesses = map[string]int{}
+	}
+	if room.ClueGiverCounts == nil {
+		room.ClueGiverCounts = map[string]int{}
+	}
+	if room.IndividualClueGiverTarget < 1 {
+		room.IndividualClueGiverTarget = 1
 	}
 	if room.RandomizeTeams == nil {
 		room.RandomizeTeams = boolPointer(true)
