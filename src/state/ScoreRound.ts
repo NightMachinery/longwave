@@ -20,12 +20,13 @@ export function ScoreCoopRound(gameState: GameState): Partial<GameState> {
 export function ScoreTeamRound(
   gameState: GameState,
   guessingTeam: Team,
-  counterGuess: "left" | "right"
+  counterGuess: "left" | "right" | "exact"
 ): Partial<GameState> {
   const pointsScored = GetScore(gameState.spectrumTarget, gameState.guess);
   const wasCounterGuessCorrect =
     (counterGuess === "left" && gameState.spectrumTarget < gameState.guess) ||
-    (counterGuess === "right" && gameState.spectrumTarget > gameState.guess);
+    (counterGuess === "right" && gameState.spectrumTarget > gameState.guess) ||
+    (counterGuess === "exact" && gameState.spectrumTarget === gameState.guess);
 
   let finalState: Partial<GameState> = {
     roundPhase: RoundPhase.ViewScore,

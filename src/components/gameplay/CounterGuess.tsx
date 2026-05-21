@@ -44,6 +44,13 @@ export function CounterGuess() {
           disabled={!gameState.viewer.canSubmitCounterGuess}
         />
         <Button
+          text={t("counterguess.exact", "Target is exactly here")}
+          onClick={() =>
+            submitAction({ type: "submit_counterguess", counterGuess: "exact" })
+          }
+          disabled={!gameState.viewer.canSubmitCounterGuess}
+        />
+        <Button
           text={t("counterguess.more_right")}
           onClick={() =>
             submitAction({ type: "submit_counterguess", counterGuess: "right" })

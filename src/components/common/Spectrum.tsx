@@ -98,23 +98,40 @@ export function Spectrum(props: {
         <div style={{ padding: "16px 32px" }}>
           <div style={{ position: "relative" }}>
             {props.psychicTargetValue !== undefined && (
-              <div
-                aria-hidden="true"
-                style={{
-                  position: "absolute",
-                  left: `${(props.psychicTargetValue / 20) * 100}%`,
-                  top: -6,
-                  width: 26,
-                  height: 26,
-                  borderRadius: "50%",
-                  transform: "translateX(-13px)",
-                  backgroundColor: "#7c2d12",
-                  border: "3px solid #ffedd5",
-                  boxShadow: "0 0 0 1px #fdba74",
-                  zIndex: 1,
-                  pointerEvents: "none",
-                }}
-              />
+              <>
+                <span
+                  style={{
+                    position: "absolute",
+                    width: 1,
+                    height: 1,
+                    padding: 0,
+                    margin: -1,
+                    overflow: "hidden",
+                    clip: "rect(0, 0, 0, 0)",
+                    whiteSpace: "nowrap",
+                    border: 0,
+                  }}
+                >
+                  {t("spectrum.psychic_target")}
+                </span>
+                <div
+                  aria-hidden="true"
+                  style={{
+                    position: "absolute",
+                    left: `${(props.psychicTargetValue / 20) * 100}%`,
+                    top: -6,
+                    width: 26,
+                    height: 26,
+                    borderRadius: "50%",
+                    transform: "translateX(-13px)",
+                    backgroundColor: "#7c2d12",
+                    border: "3px solid #ffedd5",
+                    boxShadow: "0 0 0 1px #fdba74",
+                    zIndex: 1,
+                    pointerEvents: "none",
+                  }}
+                />
+              </>
             )}
             <Slider
               min={0}

@@ -92,6 +92,7 @@ export type ViewerState = {
   canRerollRound: boolean;
   effectiveClueQuota: number;
   submittedClueCount: number;
+  remainingPsychicRerolls: number;
   isCurrentPsychic: boolean;
   isTemporaryRep: boolean;
 };
@@ -106,7 +107,7 @@ export interface GameState {
   spectrumTarget: number;
   clues: Clue[];
   guess: number;
-  counterGuess: "left" | "right";
+  counterGuess: "left" | "right" | "exact";
   players: PlayersTeams;
   psychicIds: string[];
   actingTeam: Team;
@@ -118,9 +119,12 @@ export interface GameState {
   previousGameResult: PreviousGameResult | null;
   deckLanguage: string | null;
   wordpack: string;
+  wordpacks: string[];
   creatorId: string;
   psychicCount: number;
   clueQuota: number;
+  psychicRerollLimit: number;
+  psychicRerollsUsed: number;
   randomizeTeams: boolean;
   viewer: ViewerState;
 }
@@ -148,9 +152,12 @@ export function InitialGameState(deckLanguage: string = "en"): GameState {
     previousGameResult: null,
     deckLanguage,
     wordpack: normalizeWordpack(deckLanguage),
+    wordpacks: [normalizeWordpack(deckLanguage)],
     creatorId: "",
     psychicCount: 1,
     clueQuota: 1,
+    psychicRerollLimit: 2,
+    psychicRerollsUsed: 0,
     randomizeTeams: true,
     viewer: {
       playerId: "",
@@ -164,6 +171,7 @@ export function InitialGameState(deckLanguage: string = "en"): GameState {
       canRerollRound: false,
       effectiveClueQuota: 1,
       submittedClueCount: 0,
+      remainingPsychicRerolls: 2,
       isCurrentPsychic: false,
       isTemporaryRep: false,
     },

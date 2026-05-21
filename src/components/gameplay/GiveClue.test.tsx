@@ -33,7 +33,7 @@ test("shows a clue-screen reroll button for moderators before any clue is submit
     </TestContext>
   );
 
-  fireEvent.click(component.getByRole("button", { name: "Reroll prompt" }));
+  fireEvent.click(component.getByRole("button", { name: /Reroll prompt/ }));
 
   expect(submitAction).toHaveBeenCalledWith({ type: "reroll_round" });
 });
@@ -108,7 +108,7 @@ test("shows a clue-screen reroll button for psychics before any clue is submitte
     </TestContext>
   );
 
-  fireEvent.click(component.getByRole("button", { name: "Reroll prompt" }));
+  fireEvent.click(component.getByRole("button", { name: /Reroll prompt/ }));
 
   expect(submitAction).toHaveBeenCalledWith({ type: "reroll_round" });
 });

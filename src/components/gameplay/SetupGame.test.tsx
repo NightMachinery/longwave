@@ -24,7 +24,7 @@ describe("SetupGame", () => {
     jest.clearAllMocks();
   });
 
-  it("lets moderators choose the room wordpack before mode selection", async () => {
+  it("lets moderators choose multiple room wordpacks before mode selection", async () => {
     const submitAction = jest.fn();
     const component = render(
       <TestContext
@@ -53,13 +53,11 @@ describe("SetupGame", () => {
 
     await waitFor(() => expect(mockedFetchWordpacks).toHaveBeenCalled());
 
-    fireEvent.change(component.getByLabelText("Wordpack"), {
-      target: { value: "Persian" },
-    });
+    fireEvent.click(component.getByLabelText("Persian"));
 
     expect(submitAction).toHaveBeenCalledWith({
-      type: "set_wordpack",
-      wordpack: "Persian",
+      type: "set_wordpacks",
+      wordpacks: ["English", "Persian"],
     });
   });
 });

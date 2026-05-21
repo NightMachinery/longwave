@@ -128,6 +128,7 @@ describe("RoomMenu", () => {
           gameState: {
             ...InitialGameState("en"),
             wordpack: "English",
+            wordpacks: ["English"],
             viewer: {
               ...InitialGameState("en").viewer,
               playerId: "player-id",
@@ -174,13 +175,11 @@ describe("RoomMenu", () => {
 
     fireEvent.click(component.getByText("Game settings"));
     await waitFor(() => expect(mockedFetchWordpacks).toHaveBeenCalled());
-    fireEvent.change(component.getByLabelText("Wordpack"), {
-      target: { value: "Persian" },
-    });
+    fireEvent.click(component.getByLabelText("Persian"));
 
     expect(submitAction).toHaveBeenCalledWith({
-      type: "set_wordpack",
-      wordpack: "Persian",
+      type: "set_wordpacks",
+      wordpacks: ["English", "Persian"],
     });
   });
 

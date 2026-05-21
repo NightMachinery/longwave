@@ -51,4 +51,7 @@ test("shows play again for moderators when the game is over", () => {
   );
 
   expect(component.getByRole("button", { name: "Play again" })).toBeTruthy();
+  expect(component.getByText("Winner")).toBeTruthy();
+  expect(component.getByText("Loser")).toBeTruthy();
+  expect(component.getByText("10-7")).toBeTruthy();
 });

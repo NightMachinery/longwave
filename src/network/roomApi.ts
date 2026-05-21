@@ -5,17 +5,19 @@ export type RoomAction =
   | { type: "set_name"; name: string }
   | { type: "set_game_type"; gameType: GameType }
   | { type: "set_wordpack"; wordpack: string }
+  | { type: "set_wordpacks"; wordpacks: string[] }
   | { type: "join_team"; team: Team }
   | { type: "set_team"; playerId: string; team: Team }
   | { type: "start_round" }
   | { type: "set_psychic_count"; psychicCount: number }
   | { type: "set_clue_quota"; clueQuota: number }
+  | { type: "set_psychic_reroll_limit"; psychicRerollLimit: number }
   | { type: "set_randomize_teams"; value: boolean }
   | { type: "randomize_teams" }
   | { type: "submit_clue"; clue: string }
   | { type: "set_guess"; guess: number }
   | { type: "submit_guess" }
-  | { type: "submit_counterguess"; counterGuess: "left" | "right" }
+  | { type: "submit_counterguess"; counterGuess: "left" | "right" | "exact" }
   | { type: "set_moderator"; playerId: string; value: boolean }
   | { type: "set_representative"; playerId: string; value: boolean }
   | { type: "set_observer"; playerId: string; value: boolean }
@@ -163,13 +165,22 @@ export function subscribeToRoom(
 
 export function normalizeGameStatePayload(gameState: Partial<GameState>): GameState {
   const initialState = InitialGameState(gameState.deckLanguage ?? "en");
+  const normalizedWordpacks =
+    gameState.wordpacks && gameState.wordpacks.length > 0
+      ? gameState.wordpacks.map((wordpack) => normalizeWordpack(wordpack))
+      : [
+          gameState.wordpack == null
+            ? normalizeWordpack(gameState.deckLanguage)
+            : normalizeWordpack(gameState.wordpack),
+        ];
   return {
     ...initialState,
     ...gameState,
     players: gameState.players ?? initialState.players,
     clues: gameState.clues ?? initialState.clues,
     psychicIds: gameState.psychicIds ?? initialState.psychicIds,
-    wordpack: gameState.wordpack == null ? normalizeWordpack(gameState.deckLanguage) : normalizeWordpack(gameState.wordpack),
+    wordpack: normalizedWordpacks[0],
+    wordpacks: normalizedWordpacks,
     previousTurn:
       gameState.previousTurn == null
         ? null

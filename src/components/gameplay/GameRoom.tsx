@@ -48,7 +48,7 @@ export function GameRoom() {
     playerName,
     migrationKey,
   });
-  const wordpackCards = useWordpackCards(gameState?.wordpack);
+  const wordpackCards = useWordpackCards(gameState?.wordpacks ?? gameState?.wordpack);
   const { t } = useTranslation();
 
   useEffect(() => {

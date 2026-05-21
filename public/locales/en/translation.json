@@ -26,6 +26,8 @@
     "copy_link_failed": "Could not copy the link. Copy it manually from the address bar.",
     "psychics": "Psychics",
     "clue_quota": "Clue quota",
+    "psychic_reroll_limit": "Psychic reroll limit",
+    "reroll_prompt_limited": "Reroll prompt ({{count}} left)",
     "game_settings": "Game settings",
     "wordpack": "Wordpack",
     "back": "Back"
@@ -45,6 +47,7 @@
   },
   "counterguess": {
     "more_left": "Target is to the left",
+    "exact": "Target is exactly here",
     "more_right": "Target is to the right",
     "players_clue": "{{givername}}'s clue",
     "waiting_guess_team": "Waiting for {{guessteam}} to guess left/right..."
@@ -108,11 +111,15 @@
     "coop_game": "Cooperative: 2+ Players",
     "free_game": "Free Play: 2+ Players",
     "waiting_for_mod": "Waiting for a moderator to choose a mode.",
-    "wordpack": "Wordpack"
+    "wordpack": "Wordpack",
+    "wordpacks": "Wordpacks"
   },
   "viewscore": {
     "player_clue": "{{givername}}'s clue",
     "winning_team": "{{winnerteam}} wins!",
+    "winner": "Winner",
+    "loser": "Loser",
+    "final_score": "Final score",
     "1_point_correct_guess": "1 point for their correct counter guess.",
     "0_point_wrong_guess": "0 points for their counter guess.",
     "bonus_turn": "Your team earned a <strong>bonus turn!</strong>",

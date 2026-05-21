@@ -20,7 +20,7 @@ import { buildCanonicalRoomUrl, buildMigratedRoomUrl } from "../../utils/roomIde
 import { requestMigrationLink } from "../../network/roomApi";
 import { RoundPhase } from "../../state/GameState";
 import { useTranslation } from "react-i18next";
-import { useWordpacks } from "../hooks/useWordpacks";
+import { WordpackSelector } from "../gameplay/WordpackSelector";
 
 type Notice = {
   kind: "success" | "error";
@@ -238,15 +238,23 @@ export function RoomMenu(props: {
 function GameSettingsPanel(props: { onBack: () => void }) {
   const { t } = useTranslation();
   const { gameState, submitAction } = useContext(GameModelContext);
-  const wordpacks = useWordpacks();
 
-  const updateIntegerSetting = (field: "psychicCount" | "clueQuota", delta: number) => {
+  const updateIntegerSetting = (
+    field: "psychicCount" | "clueQuota" | "psychicRerollLimit",
+    delta: number
+  ) => {
     const currentValue = gameState[field];
-    const nextValue = Math.max(1, currentValue + delta);
+    const minimum = field === "psychicRerollLimit" ? 0 : 1;
+    const nextValue = Math.max(minimum, currentValue + delta);
     if (field === "psychicCount") {
       submitAction({ type: "set_psychic_count", psychicCount: nextValue });
-    } else {
+    } else if (field === "clueQuota") {
       submitAction({ type: "set_clue_quota", clueQuota: nextValue });
+    } else {
+      submitAction({
+        type: "set_psychic_reroll_limit",
+        psychicRerollLimit: nextValue,
+      });
     }
   };
 
@@ -255,21 +263,12 @@ function GameSettingsPanel(props: { onBack: () => void }) {
       <div style={{ margin: 8, fontWeight: 700 }}>
         <FontAwesomeIcon icon={faSliders} /> {t("roomidheader.game_settings", "Game settings")}
       </div>
-      <label style={{ display: "block", margin: 8 }} htmlFor="header-wordpack-select">
-        {t("roomidheader.wordpack", "Wordpack")}
-      </label>
-      <select
-        id="header-wordpack-select"
-        value={gameState.wordpack}
-        onChange={(event) => submitAction({ type: "set_wordpack", wordpack: event.target.value })}
-        style={{ margin: 8, padding: 6, borderRadius: 8, width: "calc(100% - 16px)" }}
-      >
-        {wordpacks.map((wordpack) => (
-          <option key={wordpack.id} value={wordpack.id}>
-            {wordpack.name}
-          </option>
-        ))}
-      </select>
+      <WordpackSelector
+        selectedWordpacks={gameState.wordpacks}
+        canManageRoom={gameState.viewer.canManageRoom}
+        submitAction={submitAction}
+        compact
+      />
       <div style={{ margin: 8 }}>
         <FontAwesomeIcon icon={faWandMagicSparkles} /> {t("roomidheader.psychics")}: {gameState.psychicCount}
         <button type="button" onClick={() => updateIntegerSetting("psychicCount", -1)}>
@@ -285,6 +284,15 @@ function GameSettingsPanel(props: { onBack: () => void }) {
           -
         </button>
         <button type="button" onClick={() => updateIntegerSetting("clueQuota", 1)}>
+          +
+        </button>
+      </div>
+      <div style={{ margin: 8 }}>
+        {t("roomidheader.psychic_reroll_limit", "Psychic reroll limit")}: {gameState.psychicRerollLimit}
+        <button type="button" onClick={() => updateIntegerSetting("psychicRerollLimit", -1)}>
+          -
+        </button>
+        <button type="button" onClick={() => updateIntegerSetting("psychicRerollLimit", 1)}>
           +
         </button>
       </div>

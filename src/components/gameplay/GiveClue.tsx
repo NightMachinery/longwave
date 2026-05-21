@@ -6,6 +6,7 @@ import { GameModelContext } from "../../state/GameModelContext";
 import { Info } from "../common/Info";
 import { Animate } from "../common/Animate";
 import { useTranslation } from "react-i18next";
+import { TFunction } from "i18next";
 
 export function GiveClue() {
   const { t } = useTranslation();
@@ -39,7 +40,7 @@ export function GiveClue() {
         {gameState.viewer.canRerollRound && gameState.clues.length === 0 && (
           <CenteredColumn>
             <Button
-              text={t("roomidheader.reroll_prompt")}
+              text={rerollText(t, gameState.viewer.canManageRoom, gameState.viewer.remainingPsychicRerolls)}
               onClick={() => submitAction({ type: "reroll_round" })}
               variant="secondary"
             />
@@ -112,7 +113,7 @@ export function GiveClue() {
         </CenteredRow>
         {gameState.viewer.canRerollRound && gameState.clues.length === 0 && (
           <Button
-            text={t("roomidheader.reroll_prompt")}
+            text={rerollText(t, gameState.viewer.canManageRoom, gameState.viewer.remainingPsychicRerolls)}
             onClick={() => submitAction({ type: "reroll_round" })}
             variant="secondary"
           />
@@ -125,4 +126,18 @@ export function GiveClue() {
       </CenteredColumn>
     </div>
   );
+}
+
+function rerollText(
+  t: TFunction,
+  canManageRoom: boolean,
+  remainingPsychicRerolls: number
+) {
+  if (canManageRoom) {
+    return t("roomidheader.reroll_prompt");
+  }
+  return t("roomidheader.reroll_prompt_limited", {
+    defaultValue: "Reroll prompt ({{count}} left)",
+    count: remainingPsychicRerolls,
+  });
 }
