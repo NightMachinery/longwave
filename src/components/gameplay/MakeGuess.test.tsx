@@ -119,7 +119,7 @@ test("submits an individual guess", () => {
   expect(submitAction).toHaveBeenCalledWith({ type: "submit_individual_guess", guess: 10 });
 });
 
-test("shows individual live guess dots when the server reveals drafts", () => {
+test("shows individual live guess dots when multiple revealed drafts share a value", () => {
   const component = render(
     <TestContext
       gameState={{
@@ -130,6 +130,7 @@ test("shows individual live guess dots when the server reveals drafts", () => {
         psychicIds: ["psychic1"],
         individualDraftGuesses: {
           player1: 12,
+          player2: 12,
         },
         players: {
           psychic1: {
@@ -141,6 +142,13 @@ test("shows individual live guess dots when the server reveals drafts", () => {
           },
           player1: {
             name: "Player 1",
+            team: Team.Unset,
+            isModerator: false,
+            isRepresentative: false,
+            isObserver: false,
+          },
+          player2: {
+            name: "Player 2",
             team: Team.Unset,
             isModerator: false,
             isRepresentative: false,
@@ -159,4 +167,6 @@ test("shows individual live guess dots when the server reveals drafts", () => {
   );
 
   expect(component.getByTitle("Player 1")).toBeTruthy();
+  expect(component.getByTitle("Player 2")).toBeTruthy();
+  expect(component.getByTitle("Player 1").style.boxShadow).toBe("");
 });

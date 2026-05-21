@@ -139,30 +139,47 @@ function PlayerDotMarkers(props: { markers: SpectrumDotMarker[] }) {
         markers
           .slice()
           .sort((left, right) => left.name.localeCompare(right.name))
-          .map((marker, index) => (
-            <span
-              key={marker.playerId}
-              title={marker.name}
-              aria-hidden="true"
-              style={{
-                position: "absolute",
-                left: `${(Number(rawValue) / 20) * 100}%`,
-                top: -11 - index * 8,
-                width: 7,
-                height: 7,
-                borderRadius: "50%",
-                transform: "translateX(-3.5px)",
-                backgroundColor: marker.color,
-                border: "1px solid rgba(255,255,255,0.88)",
-                boxShadow: "0 1px 3px rgba(17,24,39,0.35)",
-                zIndex: 2,
-                pointerEvents: "none",
-              }}
-            />
-          ))
+          .map((marker, index) => {
+            const offset = spiralOffset(index);
+            return (
+              <span
+                key={marker.playerId}
+                title={marker.name}
+                aria-hidden="true"
+                style={{
+                  position: "absolute",
+                  left: `${(Number(rawValue) / 20) * 100}%`,
+                  top: 5.5 + offset.y,
+                  width: 7,
+                  height: 7,
+                  borderRadius: "50%",
+                  transform: `translateX(${offset.x - 3.5}px)`,
+                  backgroundColor: marker.color,
+                  border: "1px solid rgba(255,255,255,0.88)",
+                  zIndex: 2,
+                  pointerEvents: "none",
+                }}
+              />
+            );
+          })
       )}
     </>
   );
+}
+
+function spiralOffset(index: number) {
+  if (index === 0) {
+    return { x: 0, y: 0 };
+  }
+
+  const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+  const radius = Math.sqrt(index) * 7;
+  const angle = index * goldenAngle;
+
+  return {
+    x: Math.cos(angle) * radius,
+    y: Math.sin(angle) * radius,
+  };
 }
 
 function TrueTargetMarker(props: { value: number; label: string }) {
@@ -188,14 +205,14 @@ function TrueTargetMarker(props: { value: number; label: string }) {
       </span>
       <svg
         aria-hidden="true"
-        viewBox="0 0 18 18"
+        viewBox="0 0 22 22"
         style={{
           position: "absolute",
           left: `${(props.value / 20) * 100}%`,
           top: 0,
-          width: 18,
-          height: 18,
-          transform: "translateX(-9px)",
+          width: 22,
+          height: 22,
+          transform: "translate(-11px, -2px)",
           zIndex: 1,
           pointerEvents: "none",
           overflow: "visible",
@@ -215,17 +232,17 @@ function TrueTargetMarker(props: { value: number; label: string }) {
           </filter>
         </defs>
         <circle
-          cx="9"
-          cy="9"
-          r="8.35"
+          cx="11"
+          cy="11"
+          r="10.2"
           fill="rgba(100,116,139,0.14)"
           stroke="rgba(17,24,39,0.26)"
-          strokeWidth="0.65"
+          strokeWidth="0.8"
         />
-        <circle cx="9" cy="9" r="8" fill={`url(#${bodyGradientId})`} filter={`url(#${filterId})`} />
-        <circle cx="9" cy="9" r="7.45" fill="none" stroke="rgba(255,255,255,0.72)" strokeWidth="0.8" />
-        <circle cx="9" cy="9" r="5.1" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="1.9" />
-        <circle cx="9" cy="9" r="2.55" fill="rgba(255,255,255,0.26)" />
+        <circle cx="11" cy="11" r="9.8" fill={`url(#${bodyGradientId})`} filter={`url(#${filterId})`} />
+        <circle cx="11" cy="11" r="9.1" fill="none" stroke="rgba(255,255,255,0.72)" strokeWidth="0.95" />
+        <circle cx="11" cy="11" r="6.2" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="2.3" />
+        <circle cx="11" cy="11" r="3.1" fill="rgba(255,255,255,0.26)" />
       </svg>
     </>
   );

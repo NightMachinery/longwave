@@ -39,5 +39,5 @@ Individual mode keeps the hidden-target / clue / guess structure, but each non-c
 - Individual mode always uses one clue-giver and one clue per round.
 - The existing psychic count and clue quota settings are ignored for Individual rounds.
 - Submitted guesses stay private during the guessing phase; other players only see that a guess was submitted.
-- By default, clue-givers see live colored dot markers for each active guesser while guesses move. Moderators can disable this with **Clue givers see players guessing in real-time**.
+- By default, clue-givers see live colored dot markers for each active guesser while guesses move. The same per-player color appears on active player cards. Moderators can disable the live moving dots with **Clue givers see players guessing in real-time**.
 - All guesses are revealed during the score phase.

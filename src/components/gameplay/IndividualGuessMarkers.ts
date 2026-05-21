@@ -18,7 +18,7 @@ export function buildIndividualGuessMarkers(
     }));
 }
 
-function playerMarkerColor(playerId: string) {
+export function playerMarkerColor(playerId: string) {
   const palette = [
     "#0ea5e9",
     "#10b981",

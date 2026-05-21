@@ -4,6 +4,7 @@ import { RoomAction } from "../../network/roomApi";
 import { GameModelContext } from "../../state/GameModelContext";
 import { GameType, Team, TeamName } from "../../state/GameState";
 import { Button } from "../common/Button";
+import { playerMarkerColor } from "./IndividualGuessMarkers";
 
 const cardStyle: React.CSSProperties = {
   width: "100%",
@@ -60,6 +61,7 @@ export function PlayerManagementCard(props: {
     gameState.gameType === GameType.Teams &&
     !isCurrentPsychic &&
     (!player.isObserver || canManageRoom);
+  const showIndividualMarker = gameState.gameType === GameType.Individual && !player.isObserver;
 
   return (
     <div
@@ -79,7 +81,31 @@ export function PlayerManagementCard(props: {
         }}
       >
         <div>
-          <div style={{ fontWeight: 700, color: "#111827" }}>{player.name}</div>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              fontWeight: 700,
+              color: "#111827",
+            }}
+          >
+            {showIndividualMarker && (
+              <span
+                aria-label={`${player.name} marker color`}
+                title={`${player.name} marker color`}
+                style={{
+                  width: 9,
+                  height: 9,
+                  borderRadius: "50%",
+                  flex: "0 0 auto",
+                  backgroundColor: playerMarkerColor(props.playerId),
+                  border: "1px solid rgba(255,255,255,0.88)",
+                }}
+              />
+            )}
+            <span>{player.name}</span>
+          </div>
           <div style={{ color: "#6b7280", fontSize: 14 }}>
             {player.isObserver
               ? t("playercard.observing", "Watching this room")

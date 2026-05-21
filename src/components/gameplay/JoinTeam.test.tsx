@@ -253,6 +253,71 @@ test("allows observer players to rejoin themselves", async () => {
   });
 });
 
+test("shows individual marker color on active Individual player cards only", () => {
+  const submitAction = jest.fn();
+  const component = render(
+    <TestContext
+      gameState={{
+        ...InitialGameState(),
+        gameType: GameType.Individual,
+        players: {
+          player1: {
+            name: "Player",
+            team: Team.Unset,
+            isModerator: false,
+            isRepresentative: false,
+            isObserver: false,
+          },
+          observer1: {
+            name: "Observer",
+            team: Team.Unset,
+            isModerator: false,
+            isRepresentative: false,
+            isObserver: true,
+          },
+        },
+      }}
+      playerId="player1"
+      submitAction={submitAction}
+    >
+      <>
+        <PlayerManagementCard playerId="player1" submitAction={submitAction} />
+        <PlayerManagementCard playerId="observer1" submitAction={submitAction} />
+      </>
+    </TestContext>
+  );
+
+  expect(component.getByLabelText("Player marker color").style.backgroundColor).not.toBe("");
+  expect(component.queryByLabelText("Observer marker color")).toBeNull();
+});
+
+test("does not show individual marker color on non-Individual player cards", () => {
+  const submitAction = jest.fn();
+  const component = render(
+    <TestContext
+      gameState={{
+        ...InitialGameState(),
+        gameType: GameType.Teams,
+        players: {
+          player1: {
+            name: "Player",
+            team: Team.Left,
+            isModerator: false,
+            isRepresentative: false,
+            isObserver: false,
+          },
+        },
+      }}
+      playerId="player1"
+      submitAction={submitAction}
+    >
+      <PlayerManagementCard playerId="player1" submitAction={submitAction} />
+    </TestContext>
+  );
+
+  expect(component.queryByLabelText("Player marker color")).toBeNull();
+});
+
 test("shows mid-game team controls for non-psychics but not current psychics", () => {
   const submitAction = jest.fn();
   const component = render(
