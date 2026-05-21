@@ -116,6 +116,10 @@ export function Spectrum(props: {
 }
 
 function TrueTargetMarker(props: { value: number; label: string }) {
+  const filterId = `liquid-glass-target-${props.label.replace(/[^a-z0-9]+/gi, "-")}-${props.value}`;
+  const bodyGradientId = `${filterId}-body`;
+  const glintGradientId = `${filterId}-glint`;
+
   return (
     <>
       <span
@@ -133,27 +137,65 @@ function TrueTargetMarker(props: { value: number; label: string }) {
       >
         {props.label}
       </span>
-      <div
+      <svg
         aria-hidden="true"
+        viewBox="0 0 26 26"
         style={{
           position: "absolute",
           left: `${(props.value / 20) * 100}%`,
           top: -9,
           width: 26,
           height: 26,
-          borderRadius: "50%",
           transform: "translateX(-13px)",
-          background:
-            "radial-gradient(circle at 34% 24%, rgba(255,255,255,0.92), rgba(255,255,255,0.42) 32%, rgba(255,255,255,0.16) 66%, rgba(255,255,255,0.08) 100%)",
-          border: "1px solid rgba(255,255,255,0.62)",
-          boxShadow:
-            "inset 0 1px 2px rgba(255,255,255,0.92), inset 0 -7px 12px rgba(255,255,255,0.14), 0 5px 12px rgba(17,24,39,0.14), 0 0 0 1px rgba(17,24,39,0.08)",
-          backdropFilter: "blur(10px) saturate(1.45)",
-          WebkitBackdropFilter: "blur(10px) saturate(1.45)",
           zIndex: 1,
           pointerEvents: "none",
+          overflow: "visible",
         }}
-      />
+      >
+        <defs>
+          <radialGradient id={bodyGradientId} cx="34%" cy="24%" r="72%">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.94)" />
+            <stop offset="34%" stopColor="rgba(255,255,255,0.48)" />
+            <stop offset="68%" stopColor="rgba(255,255,255,0.18)" />
+            <stop offset="100%" stopColor="rgba(255,255,255,0.06)" />
+          </radialGradient>
+          <linearGradient id={glintGradientId} x1="5" y1="3" x2="20" y2="24">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.92)" />
+            <stop offset="45%" stopColor="rgba(255,255,255,0.16)" />
+            <stop offset="100%" stopColor="rgba(255,255,255,0.34)" />
+          </linearGradient>
+          <filter id={filterId} x="-35%" y="-35%" width="170%" height="170%">
+            <feTurbulence
+              type="fractalNoise"
+              baseFrequency="0.055 0.11"
+              numOctaves="2"
+              seed={props.value + 7}
+              result="texture"
+            />
+            <feDisplacementMap in="SourceGraphic" in2="texture" scale="1.15" xChannelSelector="R" yChannelSelector="G" result="liquid" />
+            <feGaussianBlur in="liquid" stdDeviation="0.16" result="softLiquid" />
+            <feDropShadow dx="0" dy="4" stdDeviation="3" floodColor="rgba(17,24,39,0.18)" />
+            <feComposite in="softLiquid" in2="SourceGraphic" operator="over" />
+          </filter>
+        </defs>
+        <circle cx="13" cy="13" r="12" fill={`url(#${bodyGradientId})`} filter={`url(#${filterId})`} />
+        <circle cx="13" cy="13" r="11.5" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="0.9" />
+        <path
+          d="M7.1 7.2C9.1 4.9 12.5 4.1 15.4 5.3"
+          fill="none"
+          stroke={`url(#${glintGradientId})`}
+          strokeWidth="2.1"
+          strokeLinecap="round"
+          opacity="0.9"
+        />
+        <path
+          d="M6.1 17.3C8.6 20.4 14.6 22.1 19.8 17.9"
+          fill="none"
+          stroke="rgba(255,255,255,0.22)"
+          strokeWidth="3.2"
+          strokeLinecap="round"
+        />
+      </svg>
     </>
   );
 }
