@@ -90,7 +90,7 @@ describe("SetupGame", () => {
 
     await waitFor(() => expect(mockedFetchWordpacks).toHaveBeenCalled());
 
-    component.getByRole("button", { name: "Individual: 3+ Players" }).click();
+    component.getByRole("button", { name: "Individual: 2+ Players" }).click();
 
     expect(submitAction).toHaveBeenCalledWith({
       type: "set_game_type",

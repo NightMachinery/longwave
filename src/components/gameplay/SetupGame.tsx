@@ -42,7 +42,7 @@ export function SetupGame() {
           disabled={!canManageRoom}
         />
         <Button
-          text={t("setupgame.individual_game", "Individual: 3+ Players")}
+          text={t("setupgame.individual_game", "Individual: 2+ Players")}
           onClick={() => startGame(GameType.Individual)}
           disabled={!canManageRoom}
         />

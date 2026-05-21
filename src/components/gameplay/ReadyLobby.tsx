@@ -17,7 +17,7 @@ export function ReadyLobby() {
       : gameState.gameType === GameType.Freeplay
         ? t("setupgame.free_game")
         : gameState.gameType === GameType.Individual
-          ? t("setupgame.individual_game", "Individual: 3+ Players")
+          ? t("setupgame.individual_game", "Individual: 2+ Players")
           : t("setupgame.standard_game");
 
   return (

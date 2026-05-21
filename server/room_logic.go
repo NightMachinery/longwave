@@ -145,6 +145,9 @@ func applyAction(room *RoomState, viewerID string, action ActionRequest, wordpac
 		room.PreviousGameResult = nil
 		if room.GameType == GameTypeTeams {
 			enterTeamSetup(room)
+		} else if room.GameType == GameTypeIndividual {
+			resetScoresForGameType(room)
+			room.RoundPhase = RoundPhaseReady
 		} else {
 			resetScoresForGameType(room)
 			return startRound(room, viewerID)
@@ -1281,6 +1284,9 @@ func canStartRound(room *RoomState, viewerID string) bool {
 		return canManageRoom(room, viewerID)
 	}
 	if room.RoundPhase == RoundPhaseReady {
+		if room.GameType == GameTypeIndividual && len(activePlayerIDs(room)) < 2 {
+			return false
+		}
 		return canManageRoom(room, viewerID)
 	}
 	if room.GameType == GameTypeTeams {

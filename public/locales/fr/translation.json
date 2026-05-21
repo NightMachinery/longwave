@@ -101,7 +101,7 @@
     "free_game": "Partie Libre : 2+ Joueurs",
     "waiting_for_mod": "Waiting for a moderator to choose a mode.",
     "wordpack": "Wordpack",
-    "individual_game": "Individual: 3+ Players"
+    "individual_game": "Individual: 2+ Players"
   },
   "viewscore": {
     "player_clue": "Indice fourni par {{givername}}",

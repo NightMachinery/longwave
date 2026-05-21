@@ -435,6 +435,7 @@ func (app *App) handleRoomAction(w http.ResponseWriter, r *http.Request) {
 			strings.Contains(err.Error(), "only") ||
 			strings.Contains(err.Error(), "not found") ||
 			strings.Contains(err.Error(), "must be") ||
+			strings.Contains(err.Error(), "requires") ||
 			strings.Contains(err.Error(), "reached") ||
 			strings.Contains(err.Error(), "closed") ||
 			strings.Contains(err.Error(), "available") ||

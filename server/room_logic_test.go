@@ -354,6 +354,33 @@ func TestIndividualRoundAveragesAllNonObserverGuesses(t *testing.T) {
 	}
 }
 
+func TestSetIndividualModeWaitsForEnoughActivePlayers(t *testing.T) {
+	t.Parallel()
+
+	individual := int(GameTypeIndividual)
+	room := InitialRoomState("en")
+	room.Players = map[string]PlayerState{
+		"alice": {Name: "Alice", IsModerator: true},
+	}
+
+	if err := applyAction(&room, "alice", ActionRequest{Type: "set_game_type", GameType: &individual}, nil); err != nil {
+		t.Fatalf("expected setting individual mode to succeed with one player: %v", err)
+	}
+	if room.RoundPhase != RoundPhaseReady {
+		t.Fatalf("expected individual mode to wait in ready lobby, got %v", room.RoundPhase)
+	}
+	normalizeRoundState(&room)
+	if canStartRound(&room, "alice") {
+		t.Fatalf("expected start round to be disabled until a second active player joins")
+	}
+
+	room.Players["bob"] = PlayerState{Name: "Bob"}
+	normalizeRoundState(&room)
+	if !canStartRound(&room, "alice") {
+		t.Fatalf("expected start round to be enabled with two active players")
+	}
+}
+
 func TestIndividualRejectsDuplicateAndClueGiverGuesses(t *testing.T) {
 	t.Parallel()
 

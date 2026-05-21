@@ -430,6 +430,43 @@ func TestPlayAgainPreservesModeSettingsAndPlayers(t *testing.T) {
 	}
 }
 
+func TestIndividualModeSelectionWaitsForSecondPlayer(t *testing.T) {
+	t.Parallel()
+
+	testServer := newTestHTTPServer(t)
+	defer testServer.Close()
+
+	aliceJoin := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/join", map[string]any{
+		"playerName": "Alice",
+	})
+	if aliceJoin.StatusCode != http.StatusOK {
+		t.Fatalf("expected alice join to return 200, got %d", aliceJoin.StatusCode)
+	}
+	aliceCookie := aliceJoin.Cookies()[0]
+
+	setIndividual := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/actions", map[string]any{
+		"type":     "set_game_type",
+		"gameType": int(GameTypeIndividual),
+	}, aliceCookie)
+	if setIndividual.StatusCode != http.StatusOK {
+		t.Fatalf("expected individual mode selection to return 200, got %d", setIndividual.StatusCode)
+	}
+	individualBody := decodeBody[RoomView](t, setIndividual.Body)
+	if individualBody.RoundPhase != RoundPhaseReady {
+		t.Fatalf("expected individual mode to wait in ready lobby, got %v", individualBody.RoundPhase)
+	}
+	if individualBody.Viewer.CanStartRound {
+		t.Fatalf("expected start round to be disabled with one active player")
+	}
+
+	startTooEarly := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/actions", map[string]any{
+		"type": "start_round",
+	}, aliceCookie)
+	if startTooEarly.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected early individual start to return 400, got %d", startTooEarly.StatusCode)
+	}
+}
+
 func TestResetRoomIDInvalidatesOldJoinLinkButForwardsAuthenticatedPlayers(t *testing.T) {
 	t.Parallel()
 
