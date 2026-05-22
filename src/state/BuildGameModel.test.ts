@@ -59,4 +59,30 @@ describe("BuildGameModel", () => {
     expect(persianModel.previousSpectrumCard?.left.text).toBe("گرم");
     expect(persianModel.previousSpectrumCard?.right.text).toBe("سرد");
   });
+
+  it("keeps seeded deck ordering stable", () => {
+    const gameState = {
+      ...InitialGameState(),
+      deckSeed: "SAME",
+      deckIndex: 0,
+    };
+    const cards = [
+      card("A", "a"),
+      card("B", "b"),
+      card("C", "c"),
+      card("D", "d"),
+      card("E", "e"),
+    ];
+
+    const firstModel = BuildGameModel(gameState, noop, cards, noop);
+    const secondModel = BuildGameModel(
+      { ...gameState, deckIndex: 1 },
+      noop,
+      cards,
+      noop
+    );
+
+    expect(firstModel.spectrumCard.left.text).toBe("B");
+    expect(secondModel.spectrumCard.left.text).toBe("E");
+  });
 });

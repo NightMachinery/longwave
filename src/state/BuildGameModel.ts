@@ -2,9 +2,7 @@ import { GameState, Team } from "./GameState";
 import { RoomAction } from "../network/roomApi";
 import { fallbackWordpackCards, WordpackCard } from "./Wordpack";
 
-const shuffleSeed: {
-  shuffle: <T>(arr: T[], seed: string) => T[];
-} = require("shuffle-seed");
+const seedrandom: (seed: string) => () => number = require("seedrandom");
 
 type Player = {
   id: string;
@@ -26,7 +24,18 @@ export interface GameModel {
 }
 
 function getSeededDeck(seed: string, cards: WordpackCard[]): WordpackCard[] {
-  return shuffleSeed.shuffle(cards, seed);
+  const rng = seedrandom(seed || "none");
+  const remainingIndexes = cards.map((_, index) => index);
+  const shuffledCards: WordpackCard[] = [];
+
+  for (let index = 0; index < cards.length; index += 1) {
+    const remainingIndex = Math.floor(rng() * remainingIndexes.length);
+    const cardIndex = remainingIndexes[remainingIndex];
+    remainingIndexes.splice(remainingIndex, 1);
+    shuffledCards.push(cards[cardIndex]);
+  }
+
+  return shuffledCards;
 }
 
 function getCardAtIndex(

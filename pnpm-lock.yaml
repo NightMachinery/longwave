@@ -83,9 +83,9 @@ dependencies:
   react-tippy:
     specifier: ^1.4.0
     version: 1.4.0
-  shuffle-seed:
-    specifier: ^1.1.6
-    version: 1.1.6
+  seedrandom:
+    specifier: 2.4.4
+    version: 2.4.4
   tippy.js:
     specifier: ^6.3.7
     version: 6.3.7
@@ -1871,12 +1871,6 @@ packages:
 
   /shallowequal@1.1.0:
     resolution: {integrity: sha512-y0m1JoUZSlPAjXVtPPW70aZWfIL/dSP7AFkRnniLCrK/8MDKog3TySTBmckD+RObVxH0v4Tox67+F14PdED2oQ==}
-    dev: false
-
-  /shuffle-seed@1.1.6:
-    resolution: {integrity: sha512-Vr9wlwMKJVUeFNGyc4aNbrzkI568gkve7ykyJ+1/cz78j3yRlJODWU0CuJ/fmk3MCjvAClpnqlycd/Y53UG3UA==}
-    dependencies:
-      seedrandom: 2.4.4
     dev: false
 
   /siginfo@2.0.0:
