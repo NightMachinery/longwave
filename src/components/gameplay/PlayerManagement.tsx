@@ -2,7 +2,7 @@ import React, { ReactNode, useContext } from "react";
 import { useTranslation } from "react-i18next";
 import { RoomAction } from "../../network/roomApi";
 import { GameModelContext } from "../../state/GameModelContext";
-import { GameType, Team, TeamName } from "../../state/GameState";
+import { GameType, RoundPhase, Team, TeamName } from "../../state/GameState";
 import { Button } from "../common/Button";
 import { playerMarkerColor } from "./IndividualGuessMarkers";
 
@@ -63,6 +63,11 @@ export function PlayerManagementCard(props: {
     !isCurrentPsychic &&
     (!player.isObserver || canManageRoom);
   const showIndividualMarker = gameState.gameType === GameType.Individual && !player.isObserver;
+  const needsIndividualGuess =
+    showIndividualMarker &&
+    gameState.roundPhase === RoundPhase.MakeGuess &&
+    !isCurrentPsychic &&
+    gameState.individualGuesses[props.playerId] === undefined;
 
   return (
     <div
@@ -92,17 +97,14 @@ export function PlayerManagementCard(props: {
             }}
           >
             {showIndividualMarker && (
-              <span
-                aria-label={`${player.name} marker color`}
-                title={`${player.name} marker color`}
-                style={{
-                  width: 9,
-                  height: 9,
-                  borderRadius: "50%",
-                  flex: "0 0 auto",
-                  backgroundColor: playerMarkerColor(props.playerId),
-                  border: "1px solid rgba(255,255,255,0.88)",
-                }}
+              <PlayerMarker
+                color={playerMarkerColor(props.playerId)}
+                label={
+                  needsIndividualGuess
+                    ? `${player.name} needs to guess`
+                    : `${player.name} marker color`
+                }
+                pendingGuess={needsIndividualGuess}
               />
             )}
             <span>{player.name}</span>
@@ -219,6 +221,63 @@ export function PlayerManagementCard(props: {
         </div>
       )}
     </div>
+  );
+}
+
+function PlayerMarker(props: { color: string; label: string; pendingGuess: boolean }) {
+  if (props.pendingGuess) {
+    return (
+      <span
+        aria-label={props.label}
+        title={props.label}
+        style={{
+          width: 17,
+          height: 17,
+          borderRadius: "50%",
+          flex: "0 0 auto",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: "#dc2626",
+        }}
+      >
+        <span
+          style={{
+            width: 11,
+            height: 11,
+            borderRadius: "50%",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "#ffffff",
+          }}
+        >
+          <span
+            style={{
+              width: 7,
+              height: 7,
+              borderRadius: "50%",
+              backgroundColor: props.color,
+            }}
+          />
+        </span>
+      </span>
+    );
+  }
+
+  return (
+    <span
+      aria-label={props.label}
+      title={props.label}
+      style={{
+        width: 9,
+        height: 9,
+        borderRadius: "50%",
+        flex: "0 0 auto",
+        backgroundColor: props.color,
+        border: "1px solid rgba(255,255,255,0.88)",
+      }}
+    />
   );
 }
 

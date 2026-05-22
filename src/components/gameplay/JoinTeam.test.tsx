@@ -291,6 +291,77 @@ test("shows individual marker color on active Individual player cards only", () 
   expect(component.queryByLabelText("Observer marker color")).toBeNull();
 });
 
+test("shows a pending guess ring on Individual player cards during guessing", () => {
+  const submitAction = vi.fn();
+  const component = render(
+    <TestContext
+      gameState={{
+        ...InitialGameState(),
+        gameType: GameType.Individual,
+        roundPhase: RoundPhase.MakeGuess,
+        psychicIds: ["psychic1"],
+        individualGuesses: {
+          submitted1: -1,
+        },
+        players: {
+          player1: {
+            name: "Player",
+            team: Team.Unset,
+            isModerator: false,
+            isRepresentative: false,
+            isObserver: false,
+          },
+          submitted1: {
+            name: "Submitted",
+            team: Team.Unset,
+            isModerator: false,
+            isRepresentative: false,
+            isObserver: false,
+          },
+          psychic1: {
+            name: "Psychic",
+            team: Team.Unset,
+            isModerator: false,
+            isRepresentative: false,
+            isObserver: false,
+          },
+          observer1: {
+            name: "Observer",
+            team: Team.Unset,
+            isModerator: false,
+            isRepresentative: false,
+            isObserver: true,
+          },
+        },
+      }}
+      playerId="player1"
+      submitAction={submitAction}
+    >
+      <>
+        <PlayerManagementCard playerId="player1" submitAction={submitAction} />
+        <PlayerManagementCard playerId="submitted1" submitAction={submitAction} />
+        <PlayerManagementCard playerId="psychic1" submitAction={submitAction} />
+        <PlayerManagementCard playerId="observer1" submitAction={submitAction} />
+      </>
+    </TestContext>
+  );
+
+  const pendingMarker = component.getByLabelText("Player needs to guess");
+  expect(pendingMarker.style.backgroundColor).toBe("rgb(220, 38, 38)");
+  expect((pendingMarker.children[0] as HTMLElement).style.backgroundColor).toBe(
+    "rgb(255, 255, 255)"
+  );
+  expect(
+    ((pendingMarker.children[0] as HTMLElement).children[0] as HTMLElement).style.backgroundColor
+  ).not.toBe("");
+  expect(component.queryByLabelText("Submitted needs to guess")).toBeNull();
+  expect(component.getByLabelText("Submitted marker color")).toBeTruthy();
+  expect(component.queryByLabelText("Psychic needs to guess")).toBeNull();
+  expect(component.getByLabelText("Psychic marker color")).toBeTruthy();
+  expect(component.queryByLabelText("Observer needs to guess")).toBeNull();
+  expect(component.queryByLabelText("Observer marker color")).toBeNull();
+});
+
 test("does not show individual marker color on non-Individual player cards", () => {
   const submitAction = vi.fn();
   const component = render(
