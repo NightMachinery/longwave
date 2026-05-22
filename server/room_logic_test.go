@@ -268,6 +268,41 @@ func TestExactCounterGuessScoresWhenTargetEqualsGuess(t *testing.T) {
 	}
 }
 
+func TestStartRoundStoresPreviousTurnResults(t *testing.T) {
+	t.Parallel()
+
+	room := InitialRoomState("en")
+	room.GameType = GameTypeTeams
+	room.RoundPhase = RoundPhaseViewScore
+	room.ActingTeam = TeamLeft
+	room.SpectrumTarget = 8
+	room.Guess = 9
+	room.CounterGuess = "left"
+	room.TurnsTaken = 0
+	room.DeckIndex = 4
+	room.Players = map[string]PlayerState{
+		"alice": {Name: "Alice", Team: TeamRight, IsModerator: true},
+		"bob":   {Name: "Bob", Team: TeamLeft},
+	}
+	room.Clues = []Clue{{AuthorID: "bob", AuthorName: "Bob", Text: "coffee"}}
+
+	if err := startRound(&room, "alice"); err != nil {
+		t.Fatalf("expected next round to start: %v", err)
+	}
+	if room.PreviousTurn == nil {
+		t.Fatalf("expected previous turn to be stored")
+	}
+	if room.PreviousTurn.GameType != GameTypeTeams {
+		t.Fatalf("expected previous game type to be stored, got %v", room.PreviousTurn.GameType)
+	}
+	if room.PreviousTurn.ActingTeam != TeamLeft {
+		t.Fatalf("expected previous acting team to be stored, got %v", room.PreviousTurn.ActingTeam)
+	}
+	if room.PreviousTurn.CounterGuess != "left" {
+		t.Fatalf("expected previous counter guess to be stored, got %q", room.PreviousTurn.CounterGuess)
+	}
+}
+
 func TestModeratorCannotMoveCurrentPsychicTeam(t *testing.T) {
 	t.Parallel()
 

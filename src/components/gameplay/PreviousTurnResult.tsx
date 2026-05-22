@@ -1,44 +1,43 @@
 import React, { useContext } from "react";
-import { TurnSummaryModel } from "../../state/GameState";
+import { GameType, Team, TeamName, TeamReverse, TurnSummaryModel } from "../../state/GameState";
 import { CenteredColumn } from "../common/LayoutElements";
 import { Spectrum } from "../common/Spectrum";
 import { GameModelContext } from "../../state/GameModelContext";
 import { useTranslation } from "react-i18next";
+import { GetScore } from "../../state/GetScore";
+import { buildIndividualGuessMarkers } from "./IndividualGuessMarkers";
 
 export function PreviousTurnResult(props: TurnSummaryModel) {
   const { t } = useTranslation();
-  const { previousSpectrumCard } = useContext(GameModelContext);
+  const { gameState, previousSpectrumCard } = useContext(GameModelContext);
   const style: React.CSSProperties = {
     borderTop: "1px solid black",
     margin: 16,
     paddingTop: 16,
   };
 
-  const glassStyle: React.CSSProperties = {
-    position: "absolute",
-    zIndex: 10,
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-    backgroundColor: "rgba(255,255,255,0.5)",
-  };
-
   if (!previousSpectrumCard) {
     return null;
   }
 
+  const gameType = props.gameType ?? gameState.gameType;
+  const individualGuesses = props.individualGuesses ?? {};
+  const dotMarkers =
+    gameType === GameType.Individual
+      ? buildIndividualGuessMarkers(individualGuesses, gameState.players)
+      : [];
+
   return (
     <div style={style}>
       <CenteredColumn>
-        <em>{t("previousturnresult.previous_game")}</em>
+        <em>{t("previousturnresult.previous_game", "Previous round")}</em>
       </CenteredColumn>
-      <div style={{ position: "relative" }}>
-        <div style={glassStyle} />
+      <div>
         <Spectrum
           spectrumCard={previousSpectrumCard}
-          handleValue={props.guess}
+          handleValue={gameType === GameType.Individual ? undefined : props.guess}
           targetValue={props.spectrumTarget}
+          dotMarkers={dotMarkers}
         />
         <CenteredColumn>
           {props.clues.map((clue) => (
@@ -46,7 +45,79 @@ export function PreviousTurnResult(props: TurnSummaryModel) {
               <strong>{clue.authorName}</strong>: {clue.text}
             </div>
           ))}
+          <PreviousRoundScoreSummary
+            gameType={gameType}
+            spectrumTarget={props.spectrumTarget}
+            guess={props.guess}
+            counterGuess={props.counterGuess}
+            actingTeam={props.actingTeam}
+            individualGuesses={individualGuesses}
+          />
         </CenteredColumn>
+      </div>
+    </div>
+  );
+}
+
+function PreviousRoundScoreSummary(props: {
+  gameType: GameType;
+  spectrumTarget: number;
+  guess: number;
+  counterGuess?: "left" | "right" | "exact";
+  actingTeam?: Team;
+  individualGuesses: { [playerId: string]: number };
+}) {
+  const { t } = useTranslation();
+  const { gameState } = useContext(GameModelContext);
+
+  if (props.gameType === GameType.Individual) {
+    const guesserIds = Object.keys(props.individualGuesses)
+      .filter((playerId) => props.individualGuesses[playerId] >= 0)
+      .sort((left, right) =>
+        (gameState.players[left]?.name ?? left).localeCompare(gameState.players[right]?.name ?? right)
+      );
+    return (
+      <div>
+        {guesserIds.map((playerId) => (
+          <div key={playerId}>
+            <strong>{gameState.players[playerId]?.name ?? playerId}</strong>:{" "}
+            {props.individualGuesses[playerId]} (
+            {GetScore(props.spectrumTarget, props.individualGuesses[playerId])}{" "}
+            {t("viewscore.points")})
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  const score = GetScore(props.spectrumTarget, props.guess);
+  const displayScore = props.gameType === GameType.Cooperative && score === 4 ? 3 : score;
+
+  if (props.gameType !== GameType.Teams || props.actingTeam === undefined) {
+    return (
+      <div>
+        {t("viewscore.score")}: {displayScore} {t("viewscore.points")}
+      </div>
+    );
+  }
+
+  const counterGuess = props.counterGuess ?? "left";
+  const wasCounterGuessCorrect =
+    (counterGuess === "left" && props.spectrumTarget < props.guess) ||
+    (counterGuess === "right" && props.spectrumTarget > props.guess) ||
+    (counterGuess === "exact" && props.spectrumTarget === props.guess);
+
+  return (
+    <div>
+      <div>
+        {TeamName(props.actingTeam, t)} {t("previousturnresult.scored", "scored")}{" "}
+        {displayScore} {t("viewscore.points")}
+      </div>
+      <div>
+        {TeamName(TeamReverse(props.actingTeam), t)} {t("viewscore.got")}{" "}
+        {wasCounterGuessCorrect
+          ? t("viewscore.1_point_correct_guess")
+          : t("viewscore.0_point_wrong_guess")}
       </div>
     </div>
   );

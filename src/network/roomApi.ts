@@ -191,6 +191,7 @@ export function normalizeGameStatePayload(gameState: Partial<GameState>): GameSt
         : {
             ...gameState.previousTurn,
             clues: gameState.previousTurn.clues ?? [],
+            individualGuesses: gameState.previousTurn.individualGuesses ?? {},
           },
     previousGameResult: gameState.previousGameResult ?? null,
     individualScores: gameState.individualScores ?? initialState.individualScores,

@@ -90,3 +90,44 @@ describe("hint arrival effects", () => {
     expect(localStorage.getItem(hintSoundEffectsKey)).toBe("true");
   });
 });
+
+test("shows the previous round above player cards with results", () => {
+  const component = render(
+    <TestContext
+      gameState={{
+        ...InitialGameState(),
+        gameType: GameType.Cooperative,
+        roundPhase: RoundPhase.MakeGuess,
+        previousTurn: {
+          deckIndex: 0,
+          gameType: GameType.Cooperative,
+          clueAuthorName: "Psychic",
+          clues: [{ authorId: "psychic1", authorName: "Psychic", text: "coffee", order: 0 }],
+          spectrumTarget: 10,
+          guess: 10,
+          individualGuesses: {},
+        },
+        players: {
+          player1: {
+            name: "Player",
+            team: Team.Unset,
+            isModerator: false,
+            isRepresentative: false,
+            isObserver: false,
+          },
+        },
+      }}
+      playerId="player1"
+    >
+      <ActiveGame />
+    </TestContext>
+  );
+
+  const previousRound = component.getByText(/Previous/);
+  const playerCard = component.getByTestId("player-card-player1");
+
+  expect(previousRound.compareDocumentPosition(playerCard) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+  expect(
+    component.getByText((_, element) => element?.textContent === "Score: 3 points")
+  ).toBeTruthy();
+});

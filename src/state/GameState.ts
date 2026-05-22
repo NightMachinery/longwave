@@ -66,10 +66,14 @@ export type Clue = {
 
 export type TurnSummaryModel = {
   deckIndex: number;
+  gameType?: GameType;
   clueAuthorName: string;
   clues: Clue[];
   spectrumTarget: number;
   guess: number;
+  counterGuess?: "left" | "right" | "exact";
+  actingTeam?: Team;
+  individualGuesses?: { [playerId: string]: number };
 };
 
 export type PreviousGameResult = {

@@ -975,6 +975,10 @@ func startRound(room *RoomState, viewerID string) error {
 	if !ok || player.IsObserver {
 		return errUnauthorized
 	}
+	previousGameType := room.GameType
+	previousActingTeam := room.ActingTeam
+	previousCounterGuess := room.CounterGuess
+	previousIndividualGuesses := copyIntMap(room.IndividualGuesses)
 	if room.RoundPhase == RoundPhaseReady {
 		if !canManageRoom(room, viewerID) {
 			return errUnauthorized
@@ -1026,11 +1030,15 @@ func startRound(room *RoomState, viewerID string) error {
 			clueAuthorName = room.Clues[0].AuthorName
 		}
 		room.PreviousTurn = &TurnSummaryModel{
-			DeckIndex:      room.DeckIndex,
-			ClueAuthorName: clueAuthorName,
-			Clues:          append([]Clue(nil), room.Clues...),
-			SpectrumTarget: room.SpectrumTarget,
-			Guess:          room.Guess,
+			DeckIndex:         room.DeckIndex,
+			GameType:          previousGameType,
+			ClueAuthorName:    clueAuthorName,
+			Clues:             append([]Clue(nil), room.Clues...),
+			SpectrumTarget:    room.SpectrumTarget,
+			Guess:             room.Guess,
+			CounterGuess:      previousCounterGuess,
+			ActingTeam:        previousActingTeam,
+			IndividualGuesses: previousIndividualGuesses,
 		}
 	}
 	room.RoundPhase = RoundPhaseGiveClue

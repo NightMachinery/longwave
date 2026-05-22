@@ -49,8 +49,8 @@ export function ActiveGame() {
       {gameState.roundPhase === RoundPhase.MakeGuess && <MakeGuess />}
       {gameState.roundPhase === RoundPhase.CounterGuess && <CounterGuess />}
       {gameState.roundPhase === RoundPhase.ViewScore && <ViewScore />}
-      <Scoreboard />
       {gameState.previousTurn && <PreviousTurnResult {...gameState.previousTurn} />}
+      <Scoreboard />
     </>
   );
 }

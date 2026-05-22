@@ -55,11 +55,15 @@ type Clue struct {
 }
 
 type TurnSummaryModel struct {
-	DeckIndex      int    `json:"deckIndex"`
-	ClueAuthorName string `json:"clueAuthorName"`
-	Clues          []Clue `json:"clues"`
-	SpectrumTarget int    `json:"spectrumTarget"`
-	Guess          int    `json:"guess"`
+	DeckIndex         int            `json:"deckIndex"`
+	GameType          GameType       `json:"gameType"`
+	ClueAuthorName    string         `json:"clueAuthorName"`
+	Clues             []Clue         `json:"clues"`
+	SpectrumTarget    int            `json:"spectrumTarget"`
+	Guess             int            `json:"guess"`
+	CounterGuess      string         `json:"counterGuess"`
+	ActingTeam        Team           `json:"actingTeam"`
+	IndividualGuesses map[string]int `json:"individualGuesses,omitempty"`
 }
 
 type PreviousGameResult struct {
