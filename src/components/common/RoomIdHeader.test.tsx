@@ -9,25 +9,19 @@ import { copyTextToClipboard } from "../../utils/copyTextToClipboard";
 import { fetchWordpacks, requestMigrationLink } from "../../network/roomApi";
 import { hintSoundEffectsKey, hintVisualEffectsKey } from "../../utils/localPreferences";
 
-jest.mock("../../utils/copyTextToClipboard", () => ({
-  copyTextToClipboard: jest.fn(),
+vi.mock("../../utils/copyTextToClipboard", () => ({
+  copyTextToClipboard: vi.fn(),
 }));
 
-jest.mock("../../network/roomApi", () => ({
-  requestMigrationLink: jest.fn(),
-  fetchWordpacks: jest.fn(),
+vi.mock("../../network/roomApi", () => ({
+  requestMigrationLink: vi.fn(),
+  fetchWordpacks: vi.fn(),
 }));
 
 describe("RoomMenu", () => {
-  const mockedCopyTextToClipboard = copyTextToClipboard as jest.MockedFunction<
-    typeof copyTextToClipboard
-  >;
-  const mockedRequestMigrationLink = requestMigrationLink as jest.MockedFunction<
-    typeof requestMigrationLink
-  >;
-  const mockedFetchWordpacks = fetchWordpacks as jest.MockedFunction<
-    typeof fetchWordpacks
-  >;
+  const mockedCopyTextToClipboard = vi.mocked(copyTextToClipboard);
+  const mockedRequestMigrationLink = vi.mocked(requestMigrationLink);
+  const mockedFetchWordpacks = vi.mocked(fetchWordpacks);
 
   beforeEach(() => {
     localStorage.clear();
@@ -40,7 +34,7 @@ describe("RoomMenu", () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     window.history.replaceState({}, "", "/");
   });
 
@@ -77,8 +71,8 @@ describe("RoomMenu", () => {
           psychics: [],
           spectrumCard: { left: { text: "left" }, right: { text: "right" } },
           previousSpectrumCard: null,
-          submitAction: jest.fn(),
-          openNameEditor: jest.fn(),
+          submitAction: vi.fn(),
+          openNameEditor: vi.fn(),
         }}
       >
         <Suspense fallback={<div>Loading...</div>}>
@@ -89,7 +83,7 @@ describe("RoomMenu", () => {
               showCopyNotice={async (text) => {
                 await copyTextToClipboard(text);
               }}
-              showNotice={jest.fn()}
+              showNotice={vi.fn()}
             />
           </I18nextProvider>
         </Suspense>
@@ -123,7 +117,7 @@ describe("RoomMenu", () => {
   });
 
   it("opens game settings and changes the wordpack", async () => {
-    const submitAction = jest.fn();
+    const submitAction = vi.fn();
     const component = render(
       <GameModelContext.Provider
         value={{
@@ -159,7 +153,7 @@ describe("RoomMenu", () => {
           spectrumCard: { left: { text: "left" }, right: { text: "right" } },
           previousSpectrumCard: null,
           submitAction,
-          openNameEditor: jest.fn(),
+          openNameEditor: vi.fn(),
         }}
       >
         <Suspense fallback={<div>Loading...</div>}>
@@ -168,7 +162,7 @@ describe("RoomMenu", () => {
               roomId="ROOM"
               canonicalRoomUrl="http://localhost/ROOM"
               showCopyNotice={async () => {}}
-              showNotice={jest.fn()}
+              showNotice={vi.fn()}
             />
           </I18nextProvider>
         </Suspense>
@@ -186,7 +180,7 @@ describe("RoomMenu", () => {
   });
 
   it("lets moderators toggle individual live guess visibility", () => {
-    const submitAction = jest.fn();
+    const submitAction = vi.fn();
     const component = render(
       <GameModelContext.Provider
         value={{
@@ -221,7 +215,7 @@ describe("RoomMenu", () => {
           spectrumCard: { left: { text: "left" }, right: { text: "right" } },
           previousSpectrumCard: null,
           submitAction,
-          openNameEditor: jest.fn(),
+          openNameEditor: vi.fn(),
         }}
       >
         <Suspense fallback={<div>Loading...</div>}>
@@ -230,7 +224,7 @@ describe("RoomMenu", () => {
               roomId="ROOM"
               canonicalRoomUrl="http://localhost/ROOM"
               showCopyNotice={async () => {}}
-              showNotice={jest.fn()}
+              showNotice={vi.fn()}
             />
           </I18nextProvider>
         </Suspense>
@@ -280,8 +274,8 @@ describe("RoomMenu", () => {
           psychics: [],
           spectrumCard: { left: { text: "left" }, right: { text: "right" } },
           previousSpectrumCard: null,
-          submitAction: jest.fn(),
-          openNameEditor: jest.fn(),
+          submitAction: vi.fn(),
+          openNameEditor: vi.fn(),
         }}
       >
         <Suspense fallback={<div>Loading...</div>}>
@@ -290,7 +284,7 @@ describe("RoomMenu", () => {
               roomId="ROOM"
               canonicalRoomUrl="http://localhost/ROOM"
               showCopyNotice={async () => {}}
-              showNotice={jest.fn()}
+              showNotice={vi.fn()}
             />
           </I18nextProvider>
         </Suspense>

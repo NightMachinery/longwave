@@ -19,7 +19,7 @@ If `public_url` omits a scheme, `http://` is assumed.
 ## What it manages
 
 - installs frontend dependencies with `pnpm` using the committed `pnpm-lock.yaml`
-- builds the React frontend with Node `20.20.0`
+- builds the Vite React frontend with Node `20.20.0`
 - builds the local Go backend that replaces Firebase for room sync
 - stores room state in local SQLite with a 7-day idle TTL
 - serves the SPA, API, and SSE room updates from the same local backend
@@ -131,7 +131,7 @@ Important files:
 
 Saved config values:
 
-- `PUBLIC_URL`
+- `PUBLIC_URL` for the public Caddy origin; Vite asset paths are built from the app root
 - `NODE_VERSION`
 - `APP_PORT`
 - `ROOM_TTL`

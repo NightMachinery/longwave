@@ -6,7 +6,7 @@ import { InputName } from "./InputName";
 
 describe("InputName", () => {
   it("submits the entered name when the button is clicked", () => {
-    const setName = jest.fn();
+    const setName = vi.fn();
     const component = render(
       <Suspense fallback={<div>Loading...</div>}>
         <I18nextProvider i18n={i18n}>
@@ -24,7 +24,7 @@ describe("InputName", () => {
   });
 
   it("still submits the entered name when pressing enter", () => {
-    const setName = jest.fn();
+    const setName = vi.fn();
     const component = render(
       <Suspense fallback={<div>Loading...</div>}>
         <I18nextProvider i18n={i18n}>

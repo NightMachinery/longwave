@@ -4,7 +4,7 @@ import { CounterGuess } from "./CounterGuess";
 import { TestContext } from "./TestContext";
 
 test("submits an exact counter guess", () => {
-  const submitAction = jest.fn();
+  const submitAction = vi.fn();
   const component = render(
     <TestContext
       gameState={{

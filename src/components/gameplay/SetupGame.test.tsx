@@ -4,13 +4,11 @@ import { fetchWordpacks } from "../../network/roomApi";
 import { SetupGame } from "./SetupGame";
 import { TestContext } from "./TestContext";
 
-jest.mock("../../network/roomApi", () => ({
-  fetchWordpacks: jest.fn(),
+vi.mock("../../network/roomApi", () => ({
+  fetchWordpacks: vi.fn(),
 }));
 
-const mockedFetchWordpacks = fetchWordpacks as jest.MockedFunction<
-  typeof fetchWordpacks
->;
+const mockedFetchWordpacks = vi.mocked(fetchWordpacks);
 
 describe("SetupGame", () => {
   beforeEach(() => {
@@ -21,11 +19,11 @@ describe("SetupGame", () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it("lets moderators choose multiple room wordpacks before mode selection", async () => {
-    const submitAction = jest.fn();
+    const submitAction = vi.fn();
     const component = render(
       <TestContext
         gameState={{
@@ -62,7 +60,7 @@ describe("SetupGame", () => {
   });
 
   it("lets moderators double-click a wordpack to select only that wordpack", async () => {
-    const submitAction = jest.fn();
+    const submitAction = vi.fn();
     const component = render(
       <TestContext
         gameState={{
@@ -100,7 +98,7 @@ describe("SetupGame", () => {
   });
 
   it("lets moderators choose Individual mode", async () => {
-    const submitAction = jest.fn();
+    const submitAction = vi.fn();
     const component = render(
       <TestContext
         gameState={{

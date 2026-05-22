@@ -28,7 +28,7 @@ export function TestContext(props: {
     <GameModelContext.Provider
       value={BuildGameModel(
         mergedGameState,
-        props.submitAction || jest.fn(),
+        props.submitAction || vi.fn(),
         fallbackWordpackCards,
         () => {}
       )}

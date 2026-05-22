@@ -15,9 +15,7 @@
     "@testing-library/user-event": "^12.6.0",
     "@tippyjs/react": "^4.2.5",
     "@types/i18next-fs-backend": "^1.1.2",
-    "@types/jest": "^26.0.20",
     "@types/lodash": "^4.14.168",
-    "@types/node": "^14.14.22",
     "@types/rc-slider": "^8.6.6",
     "@types/react": "^17.0.0",
     "@types/react-dom": "^17.0.0",
@@ -34,23 +32,18 @@
     "react-flags-select": "^2.1.2",
     "react-i18next": "^12.0.0",
     "react-router-dom": "^5.2.0",
-    "react-scripts": "^5.0.1",
     "react-tippy": "^1.4.0",
     "shuffle-seed": "^1.1.6",
     "tippy.js": "^6.3.7",
     "typescript": "^4.9.5"
   },
   "scripts": {
-    "start:backend": "LONGWAVE_ADDR=127.0.0.1:3310 LONGWAVE_BUILD_DIR=public LONGWAVE_DB_PATH=.self_host/dev/rooms.sqlite GOTOOLCHAIN=local go run ./server/cmd/longwave-server",
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "start:backend": "LONGWAVE_ADDR=127.0.0.1:3310 LONGWAVE_BUILD_DIR=server/dev_static LONGWAVE_DB_PATH=.self_host/dev/rooms.sqlite GOTOOLCHAIN=local go run ./server/cmd/longwave-server",
+    "start": "vite",
+    "build": "tsc --noEmit && vite build",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
-  "eslintConfig": {
-    "extends": "react-app"
-  },
-  "proxy": "http://127.0.0.1:3310",
   "browserslist": {
     "production": [
       ">0.2%",
@@ -62,5 +55,12 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.41",
+    "@vitejs/plugin-react": "^6.0.2",
+    "jsdom": "^29.1.1",
+    "vite": "^8",
+    "vitest": "^4"
   }
 }

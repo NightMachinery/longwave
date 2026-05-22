@@ -4,7 +4,7 @@ import { GiveClue } from "./GiveClue";
 import { TestContext } from "./TestContext";
 
 test("shows a clue-screen reroll button for moderators before any clue is submitted", () => {
-  const submitAction = jest.fn();
+  const submitAction = vi.fn();
   const component = render(
     <TestContext
       gameState={{
@@ -40,7 +40,7 @@ test("shows a clue-screen reroll button for moderators before any clue is submit
 });
 
 test("shows a moderator-only clue-screen target reroll button", () => {
-  const submitAction = jest.fn();
+  const submitAction = vi.fn();
   const component = render(
     <TestContext
       gameState={{
@@ -114,7 +114,7 @@ test("hides the clue-screen reroll button after a clue is submitted", () => {
 });
 
 test("shows a clue-screen reroll button for psychics before any clue is submitted", () => {
-  const submitAction = jest.fn();
+  const submitAction = vi.fn();
   const component = render(
     <TestContext
       gameState={{

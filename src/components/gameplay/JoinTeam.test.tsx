@@ -5,7 +5,7 @@ import { TestContext } from "./TestContext";
 import { PlayerManagementCard } from "./PlayerManagement";
 
 test("dispatches join_team when selecting a team", async () => {
-  const submitAction = jest.fn();
+  const submitAction = vi.fn();
   const component = render(
     <TestContext
       gameState={{
@@ -45,7 +45,7 @@ test("dispatches join_team when selecting a team", async () => {
 });
 
 test("shows randomize team controls for moderators during team setup", async () => {
-  const submitAction = jest.fn();
+  const submitAction = vi.fn();
   const component = render(
     <TestContext
       gameState={{
@@ -119,7 +119,7 @@ test("shows previous game result during team setup", () => {
 });
 
 test("allows moderators to force-assign joined players to a team", async () => {
-  const submitAction = jest.fn();
+  const submitAction = vi.fn();
   const component = render(
     <TestContext
       gameState={{
@@ -170,7 +170,7 @@ test("allows moderators to force-assign joined players to a team", async () => {
 });
 
 test("allows moderators to manage themselves without showing self moderator controls", async () => {
-  const submitAction = jest.fn();
+  const submitAction = vi.fn();
   const component = render(
     <TestContext
       gameState={{
@@ -218,7 +218,7 @@ test("allows moderators to manage themselves without showing self moderator cont
 });
 
 test("allows observer players to rejoin themselves", async () => {
-  const submitAction = jest.fn();
+  const submitAction = vi.fn();
   const component = render(
     <TestContext
       gameState={{
@@ -254,7 +254,7 @@ test("allows observer players to rejoin themselves", async () => {
 });
 
 test("shows individual marker color on active Individual player cards only", () => {
-  const submitAction = jest.fn();
+  const submitAction = vi.fn();
   const component = render(
     <TestContext
       gameState={{
@@ -292,7 +292,7 @@ test("shows individual marker color on active Individual player cards only", () 
 });
 
 test("does not show individual marker color on non-Individual player cards", () => {
-  const submitAction = jest.fn();
+  const submitAction = vi.fn();
   const component = render(
     <TestContext
       gameState={{
@@ -319,7 +319,7 @@ test("does not show individual marker color on non-Individual player cards", () 
 });
 
 test("shows mid-game team controls for non-psychics but not current psychics", () => {
-  const submitAction = jest.fn();
+  const submitAction = vi.fn();
   const component = render(
     <TestContext
       gameState={{
@@ -411,7 +411,7 @@ test("shows temporary representative badges for other players", () => {
       }}
       playerId="mod1"
     >
-      <PlayerManagementCard playerId="player2" submitAction={jest.fn()} />
+      <PlayerManagementCard playerId="player2" submitAction={vi.fn()} />
     </TestContext>
   );
 

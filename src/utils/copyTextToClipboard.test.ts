@@ -11,11 +11,11 @@ describe("copyTextToClipboard", () => {
     });
 
     document.execCommand = originalExecCommand;
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it("uses navigator.clipboard when available", async () => {
-    const writeText = jest.fn().mockResolvedValue(undefined);
+    const writeText = vi.fn().mockResolvedValue(undefined);
 
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
@@ -34,7 +34,7 @@ describe("copyTextToClipboard", () => {
       value: undefined,
     });
 
-    document.execCommand = jest.fn().mockReturnValue(true);
+    document.execCommand = vi.fn().mockReturnValue(true);
 
     await expect(copyTextToClipboard("hello")).resolves.toBe(true);
     expect(document.execCommand).toHaveBeenCalledWith("copy");

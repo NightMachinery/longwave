@@ -69,7 +69,7 @@ test("shows psychics the true target during guessing", () => {
 });
 
 test("submits an individual guess", () => {
-  const submitAction = jest.fn();
+  const submitAction = vi.fn();
   const component = render(
     <TestContext
       gameState={{
