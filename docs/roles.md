@@ -56,6 +56,7 @@ Room access now uses a room-scoped server session cookie instead of the older `r
 - **Copy room link** shares the clean room URL.
 - **Migrate device** asks the server for a one-time migration link.
 - Opening that migration link on another device transfers the same in-room identity there.
-- **Reroll prompt** is available to moderators and current psychics during clueing before any clue is submitted; it draws a new spectrum prompt/target while keeping the current psychics.
+- **Reroll prompt** is available to moderators and current psychics during clueing before any clue is submitted; it draws new spectrum labels while keeping the current psychics and true target.
+- **Reroll Target** is available only to moderators during clueing before any clue is submitted; it draws a new true target while keeping the current prompt labels.
 - **Play Again** resets the current game while preserving the room, creator, player list, room settings, and a summary of the previous winner/score.
 - **Reset Room ID** rotates the join code so the old public link stops accepting new joins.

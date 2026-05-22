@@ -555,6 +555,7 @@ func TestRerollRoundKeepsPsychicsAndOnlyWorksBeforeFirstClue(t *testing.T) {
 	}
 	startedBody := decodeBody[RoomView](t, setGameType.Body)
 	initialDeckIndex := startedBody.DeckIndex
+	initialTarget := startedBody.SpectrumTarget
 	initialPsychics := append([]string(nil), startedBody.PsychicIDs...)
 	if len(initialPsychics) != 1 {
 		t.Fatalf("expected one psychic in default coop mode, got %d", len(initialPsychics))
@@ -570,8 +571,22 @@ func TestRerollRoundKeepsPsychicsAndOnlyWorksBeforeFirstClue(t *testing.T) {
 	if rerolledBody.DeckIndex != initialDeckIndex+1 {
 		t.Fatalf("expected reroll to advance deck index to %d, got %d", initialDeckIndex+1, rerolledBody.DeckIndex)
 	}
+	if rerolledBody.SpectrumTarget != initialTarget {
+		t.Fatalf("expected prompt reroll to preserve target, got %d want %d", rerolledBody.SpectrumTarget, initialTarget)
+	}
 	if strings.Join(rerolledBody.PsychicIDs, ",") != strings.Join(initialPsychics, ",") {
 		t.Fatalf("expected reroll to keep psychics %v, got %v", initialPsychics, rerolledBody.PsychicIDs)
+	}
+
+	rerollTarget := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/actions", map[string]any{
+		"type": "reroll_target",
+	}, aliceCookie)
+	if rerollTarget.StatusCode != http.StatusOK {
+		t.Fatalf("expected target reroll to return 200, got %d", rerollTarget.StatusCode)
+	}
+	targetRerolledBody := decodeBody[RoomView](t, rerollTarget.Body)
+	if targetRerolledBody.DeckIndex != rerolledBody.DeckIndex {
+		t.Fatalf("expected target reroll to preserve deck index %d, got %d", rerolledBody.DeckIndex, targetRerolledBody.DeckIndex)
 	}
 
 	psychicCookie := aliceCookie

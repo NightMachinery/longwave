@@ -36,6 +36,42 @@ test("shows a clue-screen reroll button for moderators before any clue is submit
   fireEvent.click(component.getByRole("button", { name: /Reroll prompt/ }));
 
   expect(submitAction).toHaveBeenCalledWith({ type: "reroll_round" });
+  expect(component.getByRole("button", { name: "Reroll Target" })).toBeTruthy();
+});
+
+test("shows a moderator-only clue-screen target reroll button", () => {
+  const submitAction = jest.fn();
+  const component = render(
+    <TestContext
+      gameState={{
+        ...InitialGameState(),
+        roundPhase: RoundPhase.GiveClue,
+        viewer: {
+          ...InitialGameState().viewer,
+          canManageRoom: true,
+          canRerollRound: true,
+          isCurrentPsychic: true,
+        },
+        players: {
+          mod1: {
+            name: "Mod",
+            team: Team.Unset,
+            isModerator: true,
+            isRepresentative: false,
+            isObserver: false,
+          },
+        },
+      }}
+      playerId="mod1"
+      submitAction={submitAction}
+    >
+      <GiveClue />
+    </TestContext>
+  );
+
+  fireEvent.click(component.getByRole("button", { name: "Reroll Target" }));
+
+  expect(submitAction).toHaveBeenCalledWith({ type: "reroll_target" });
 });
 
 test("hides the clue-screen reroll button after a clue is submitted", () => {
@@ -111,4 +147,5 @@ test("shows a clue-screen reroll button for psychics before any clue is submitte
   fireEvent.click(component.getByRole("button", { name: /Reroll prompt/ }));
 
   expect(submitAction).toHaveBeenCalledWith({ type: "reroll_round" });
+  expect(component.queryByRole("button", { name: "Reroll Target" })).toBeNull();
 });

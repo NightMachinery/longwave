@@ -405,6 +405,11 @@ func applyAction(room *RoomState, viewerID string, action ActionRequest, wordpac
 			return errUnauthorized
 		}
 		return rerollRound(room, isModerator)
+	case "reroll_target":
+		if !canManageRoom(room, viewerID) {
+			return errUnauthorized
+		}
+		return rerollTarget(room)
 	case "reset_room_id":
 		return nil
 	default:
@@ -882,22 +887,39 @@ func assignNewPlayerToBalancedTeam(room *RoomState, playerID string) {
 }
 
 func rerollRound(room *RoomState, isModerator bool) error {
-	if room.RoundPhase != RoundPhaseGiveClue {
-		return fmt.Errorf("prompt can only be rerolled before clues are submitted")
-	}
-	if len(room.Clues) > 0 {
-		return fmt.Errorf("prompt can only be rerolled before clues are submitted")
+	if err := validateRerollTiming(room, "prompt"); err != nil {
+		return err
 	}
 	if !isModerator && room.PsychicRerollsUsed >= room.PsychicRerollLimit {
 		return fmt.Errorf("psychic reroll limit reached")
 	}
 	room.DeckIndex += 1
-	room.SpectrumTarget = randomSpectrumTarget()
 	room.Guess = 10
 	room.CounterGuess = "left"
 	room.Clues = []Clue{}
 	if !isModerator {
 		room.PsychicRerollsUsed += 1
+	}
+	return nil
+}
+
+func rerollTarget(room *RoomState) error {
+	if err := validateRerollTiming(room, "target"); err != nil {
+		return err
+	}
+	room.SpectrumTarget = randomSpectrumTarget()
+	room.Guess = 10
+	room.CounterGuess = "left"
+	room.Clues = []Clue{}
+	return nil
+}
+
+func validateRerollTiming(room *RoomState, label string) error {
+	if room.RoundPhase != RoundPhaseGiveClue {
+		return fmt.Errorf("%s can only be rerolled before clues are submitted", label)
+	}
+	if len(room.Clues) > 0 {
+		return fmt.Errorf("%s can only be rerolled before clues are submitted", label)
 	}
 	return nil
 }

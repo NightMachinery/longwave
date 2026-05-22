@@ -37,15 +37,7 @@ export function GiveClue() {
         <Animate animation="wipe-reveal-right">
           <Spectrum spectrumCard={spectrumCard} />
         </Animate>
-        {gameState.viewer.canRerollRound && gameState.clues.length === 0 && (
-          <CenteredColumn>
-            <Button
-              text={rerollText(t, gameState.viewer.canManageRoom, gameState.viewer.remainingPsychicRerolls)}
-              onClick={() => submitAction({ type: "reroll_round" })}
-              variant="secondary"
-            />
-          </CenteredColumn>
-        )}
+        <RerollControls />
         <CenteredColumn>
           <div>
             {t(
@@ -111,13 +103,7 @@ export function GiveClue() {
             </div>
           </Info>
         </CenteredRow>
-        {gameState.viewer.canRerollRound && gameState.clues.length === 0 && (
-          <Button
-            text={rerollText(t, gameState.viewer.canManageRoom, gameState.viewer.remainingPsychicRerolls)}
-            onClick={() => submitAction({ type: "reroll_round" })}
-            variant="secondary"
-          />
-        )}
+        <RerollControls />
         <Button
           text={t("giveclue.give_clue")}
           onClick={submit}
@@ -125,6 +111,38 @@ export function GiveClue() {
         />
       </CenteredColumn>
     </div>
+  );
+}
+
+function RerollControls() {
+  const { t } = useTranslation();
+  const { gameState, submitAction } = useContext(GameModelContext);
+  const canRerollPrompt = gameState.viewer.canRerollRound && gameState.clues.length === 0;
+  const canRerollTarget = gameState.viewer.canManageRoom && gameState.clues.length === 0;
+
+  if (!canRerollPrompt && !canRerollTarget) {
+    return null;
+  }
+
+  return (
+    <CenteredRow style={{ gap: 6, flexWrap: "wrap", justifyContent: "center" }}>
+      {canRerollPrompt && (
+        <Button
+          text={rerollText(t, gameState.viewer.canManageRoom, gameState.viewer.remainingPsychicRerolls)}
+          onClick={() => submitAction({ type: "reroll_round" })}
+          variant="secondary"
+          compact
+        />
+      )}
+      {canRerollTarget && (
+        <Button
+          text={t("giveclue.reroll_target", "Reroll Target")}
+          onClick={() => submitAction({ type: "reroll_target" })}
+          variant="secondary"
+          compact
+        />
+      )}
+    </CenteredRow>
   );
 }
 

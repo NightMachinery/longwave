@@ -28,6 +28,7 @@ export type RoomAction =
   | { type: "reset_room" }
   | { type: "play_again" }
   | { type: "reroll_round" }
+  | { type: "reroll_target" }
   | { type: "reset_room_id" };
 
 export class RoomApiError extends Error {

@@ -161,6 +161,10 @@ export function RoomMenu(props: {
     gameState.viewer.canRerollRound &&
     gameState.roundPhase === RoundPhase.GiveClue &&
     gameState.clues.length === 0;
+  const canRerollTarget =
+    gameState.viewer.canManageRoom &&
+    gameState.roundPhase === RoundPhase.GiveClue &&
+    gameState.clues.length === 0;
 
   if (isEditingGameSettings) {
     return <GameSettingsPanel onBack={() => setIsEditingGameSettings(false)} />;
@@ -228,6 +232,11 @@ export function RoomMenu(props: {
       {canRerollPrompt && (
         <div {...menuItemProps} onClick={() => submitAction({ type: "reroll_round" })}>
           <FontAwesomeIcon icon={faShuffle} /> {t("roomidheader.reroll_prompt")}
+        </div>
+      )}
+      {canRerollTarget && (
+        <div {...menuItemProps} onClick={() => submitAction({ type: "reroll_target" })}>
+          <FontAwesomeIcon icon={faShuffle} /> {t("giveclue.reroll_target", "Reroll Target")}
         </div>
       )}
       {localPlayer.isObserver && (

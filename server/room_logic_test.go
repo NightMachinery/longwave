@@ -207,6 +207,7 @@ func TestPsychicCanRerollBeforeAnyClue(t *testing.T) {
 		"bob":   {Name: "Bob"},
 	}
 	initialDeckIndex := room.DeckIndex
+	initialTarget := room.SpectrumTarget
 
 	if err := applyAction(&room, "bob", ActionRequest{Type: "reroll_round"}, nil); err != nil {
 		t.Fatalf("expected psychic reroll to succeed: %v", err)
@@ -214,10 +215,41 @@ func TestPsychicCanRerollBeforeAnyClue(t *testing.T) {
 	if room.DeckIndex != initialDeckIndex+1 {
 		t.Fatalf("expected deck index to advance, got %d", room.DeckIndex)
 	}
+	if room.SpectrumTarget != initialTarget {
+		t.Fatalf("expected prompt reroll to preserve target, got %d want %d", room.SpectrumTarget, initialTarget)
+	}
 
 	room.Clues = []Clue{{AuthorID: "bob", AuthorName: "Bob", Text: "coffee"}}
 	if err := applyAction(&room, "bob", ActionRequest{Type: "reroll_round"}, nil); err == nil {
 		t.Fatalf("expected reroll after a clue to fail")
+	}
+}
+
+func TestOnlyModeratorCanRerollTargetBeforeAnyClue(t *testing.T) {
+	t.Parallel()
+
+	room := InitialRoomState("en")
+	room.RoundPhase = RoundPhaseGiveClue
+	room.PsychicIDs = []string{"bob"}
+	room.Players = map[string]PlayerState{
+		"alice": {Name: "Alice", IsModerator: true},
+		"bob":   {Name: "Bob"},
+	}
+	initialDeckIndex := room.DeckIndex
+
+	if err := applyAction(&room, "bob", ActionRequest{Type: "reroll_target"}, nil); err == nil {
+		t.Fatalf("expected psychic target reroll to fail")
+	}
+	if err := applyAction(&room, "alice", ActionRequest{Type: "reroll_target"}, nil); err != nil {
+		t.Fatalf("expected moderator target reroll to succeed: %v", err)
+	}
+	if room.DeckIndex != initialDeckIndex {
+		t.Fatalf("expected target reroll to preserve deck index, got %d", room.DeckIndex)
+	}
+
+	room.Clues = []Clue{{AuthorID: "bob", AuthorName: "Bob", Text: "coffee"}}
+	if err := applyAction(&room, "alice", ActionRequest{Type: "reroll_target"}, nil); err == nil {
+		t.Fatalf("expected target reroll after a clue to fail")
 	}
 }
 
