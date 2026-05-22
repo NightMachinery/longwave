@@ -7,6 +7,7 @@ import { GameType, InitialGameState, RoundPhase, Team } from "../../state/GameSt
 import { RoomMenu } from "./RoomIdHeader";
 import { copyTextToClipboard } from "../../utils/copyTextToClipboard";
 import { fetchWordpacks, requestMigrationLink } from "../../network/roomApi";
+import { hintSoundEffectsKey, hintVisualEffectsKey } from "../../utils/localPreferences";
 
 jest.mock("../../utils/copyTextToClipboard", () => ({
   copyTextToClipboard: jest.fn(),
@@ -29,6 +30,7 @@ describe("RoomMenu", () => {
   >;
 
   beforeEach(() => {
+    localStorage.clear();
     mockedCopyTextToClipboard.mockResolvedValue(true);
     mockedRequestMigrationLink.mockResolvedValue("http://localhost/ROOM?migrate=abc123");
     mockedFetchWordpacks.mockResolvedValue([
@@ -296,5 +298,18 @@ describe("RoomMenu", () => {
     );
 
     expect(component.getByText("Reroll prompt")).toBeTruthy();
+  });
+
+  it("persists local hint effect preferences", () => {
+    const component = renderRoomMenu();
+
+    expect((component.getByLabelText("Hint visual effects") as HTMLInputElement).checked).toBe(true);
+    expect((component.getByLabelText("Hint sound effects") as HTMLInputElement).checked).toBe(true);
+
+    fireEvent.click(component.getByLabelText("Hint visual effects"));
+    fireEvent.click(component.getByLabelText("Hint sound effects"));
+
+    expect(localStorage.getItem(hintVisualEffectsKey)).toBe("false");
+    expect(localStorage.getItem(hintSoundEffectsKey)).toBe("false");
   });
 });

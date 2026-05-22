@@ -21,6 +21,8 @@ import { requestMigrationLink } from "../../network/roomApi";
 import { GameType, RoundPhase } from "../../state/GameState";
 import { useTranslation } from "react-i18next";
 import { WordpackSelector } from "../gameplay/WordpackSelector";
+import { useBooleanPreference } from "../hooks/useBooleanPreference";
+import { hintSoundEffectsKey, hintVisualEffectsKey } from "../../utils/localPreferences";
 
 type Notice = {
   kind: "success" | "error";
@@ -146,6 +148,8 @@ export function RoomMenu(props: {
   const { t } = useTranslation();
   const { gameState, localPlayer, openNameEditor, submitAction } = useContext(GameModelContext);
   const [isEditingGameSettings, setIsEditingGameSettings] = useState(false);
+  const [hintVisualEffects, setHintVisualEffects] = useBooleanPreference(hintVisualEffectsKey, true);
+  const [hintSoundEffects, setHintSoundEffects] = useBooleanPreference(hintSoundEffectsKey, true);
 
   const menuItemProps = {
     style: { margin: 8, cursor: "pointer" },
@@ -205,6 +209,22 @@ export function RoomMenu(props: {
           </div>
         </>
       )}
+      <label style={{ display: "flex", alignItems: "center", gap: 8, margin: 8, cursor: "pointer" }}>
+        <input
+          type="checkbox"
+          checked={hintVisualEffects}
+          onChange={(event) => setHintVisualEffects(event.target.checked)}
+        />
+        {t("roomidheader.hint_visual_effects", "Hint visual effects")}
+      </label>
+      <label style={{ display: "flex", alignItems: "center", gap: 8, margin: 8, cursor: "pointer" }}>
+        <input
+          type="checkbox"
+          checked={hintSoundEffects}
+          onChange={(event) => setHintSoundEffects(event.target.checked)}
+        />
+        {t("roomidheader.hint_sound_effects", "Hint sound effects")}
+      </label>
       {canRerollPrompt && (
         <div {...menuItemProps} onClick={() => submitAction({ type: "reroll_round" })}>
           <FontAwesomeIcon icon={faShuffle} /> {t("roomidheader.reroll_prompt")}
