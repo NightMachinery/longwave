@@ -51,7 +51,8 @@ export function PlayerManagementCard(props: {
     player.isRepresentative ? t("playercard.representative", "Representative") : null,
     player.isObserver ? t("playercard.observer", "Observer") : null,
     gameState.psychicIds.includes(props.playerId) ? t("playercard.psychic", "Psychic") : null,
-    gameState.viewer.playerId === props.playerId && gameState.viewer.isTemporaryRep
+    gameState.viewer.temporaryRepIds.includes(props.playerId) ||
+    (gameState.viewer.playerId === props.playerId && gameState.viewer.isTemporaryRep)
       ? t("playercard.temporary_rep", "Temporary rep")
       : null,
   ].filter((value): value is string => Boolean(value));

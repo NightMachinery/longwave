@@ -381,3 +381,39 @@ test("shows mid-game team controls for non-psychics but not current psychics", (
     })
   ).toBeNull();
 });
+
+test("shows temporary representative badges for other players", () => {
+  const component = render(
+    <TestContext
+      gameState={{
+        ...InitialGameState(),
+        viewer: {
+          ...InitialGameState().viewer,
+          playerId: "mod1",
+          temporaryRepIds: ["player2"],
+        },
+        players: {
+          mod1: {
+            name: "Mod",
+            team: Team.Left,
+            isModerator: true,
+            isRepresentative: false,
+            isObserver: false,
+          },
+          player2: {
+            name: "Player Two",
+            team: Team.Left,
+            isModerator: false,
+            isRepresentative: false,
+            isObserver: false,
+          },
+        },
+      }}
+      playerId="mod1"
+    >
+      <PlayerManagementCard playerId="player2" submitAction={jest.fn()} />
+    </TestContext>
+  );
+
+  expect(within(component.getByTestId("player-card-player2")).getByText("Temporary rep")).toBeTruthy();
+});

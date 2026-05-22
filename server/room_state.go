@@ -118,20 +118,21 @@ type RoomState struct {
 }
 
 type ViewerState struct {
-	PlayerID                string `json:"playerId"`
-	CanManageRoom           bool   `json:"canManageRoom"`
-	CanSetGuess             bool   `json:"canSetGuess"`
-	CanSubmitGuess          bool   `json:"canSubmitGuess"`
-	CanSubmitCounterGuess   bool   `json:"canSubmitCounterGuess"`
-	CanSubmitClue           bool   `json:"canSubmitClue"`
-	CanStartRound           bool   `json:"canStartRound"`
-	CanChangeTeam           bool   `json:"canChangeTeam"`
-	CanRerollRound          bool   `json:"canRerollRound"`
-	EffectiveClueQuota      int    `json:"effectiveClueQuota"`
-	SubmittedClueCount      int    `json:"submittedClueCount"`
-	RemainingPsychicRerolls int    `json:"remainingPsychicRerolls"`
-	IsCurrentPsychic        bool   `json:"isCurrentPsychic"`
-	IsTemporaryRep          bool   `json:"isTemporaryRep"`
+	PlayerID                string   `json:"playerId"`
+	CanManageRoom           bool     `json:"canManageRoom"`
+	CanSetGuess             bool     `json:"canSetGuess"`
+	CanSubmitGuess          bool     `json:"canSubmitGuess"`
+	CanSubmitCounterGuess   bool     `json:"canSubmitCounterGuess"`
+	CanSubmitClue           bool     `json:"canSubmitClue"`
+	CanStartRound           bool     `json:"canStartRound"`
+	CanChangeTeam           bool     `json:"canChangeTeam"`
+	CanRerollRound          bool     `json:"canRerollRound"`
+	EffectiveClueQuota      int      `json:"effectiveClueQuota"`
+	SubmittedClueCount      int      `json:"submittedClueCount"`
+	RemainingPsychicRerolls int      `json:"remainingPsychicRerolls"`
+	IsCurrentPsychic        bool     `json:"isCurrentPsychic"`
+	IsTemporaryRep          bool     `json:"isTemporaryRep"`
+	TemporaryRepIDs         []string `json:"temporaryRepIds"`
 }
 
 type RoomView struct {

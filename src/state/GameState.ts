@@ -102,6 +102,7 @@ export type ViewerState = {
   remainingPsychicRerolls: number;
   isCurrentPsychic: boolean;
   isTemporaryRep: boolean;
+  temporaryRepIds: string[];
 };
 
 export interface GameState {
@@ -193,6 +194,7 @@ export function InitialGameState(deckLanguage: string = "en"): GameState {
       remainingPsychicRerolls: 2,
       isCurrentPsychic: false,
       isTemporaryRep: false,
+      temporaryRepIds: [],
     },
   };
 }

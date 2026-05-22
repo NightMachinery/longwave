@@ -1290,6 +1290,7 @@ func sanitizeRoomForViewer(room RoomState, roomID string, viewerID string) RoomV
 		RemainingPsychicRerolls: remainingPsychicRerolls(&room),
 		IsCurrentPsychic:        isPsychic(&room, viewerID),
 		IsTemporaryRep:          viewerTemporaryRep(&room, viewerID),
+		TemporaryRepIDs:         temporaryRepIDs(&room),
 	}
 	if !canSeeTarget(&room, viewerID) {
 		view.SpectrumTarget = 0
@@ -1336,10 +1337,31 @@ func playerHasSubmittedClue(room RoomState, viewerID string) bool {
 }
 
 func viewerTemporaryRep(room *RoomState, viewerID string) bool {
-	guessPool := guessingPool(room)
-	counterPool := counterGuessPool(room)
-	player := room.Players[viewerID]
-	return containsString(guessPool.allowedSubmitters, viewerID) && !player.IsRepresentative || containsString(counterPool.allowedSubmitters, viewerID) && !player.IsRepresentative
+	return containsString(temporaryRepIDs(room), viewerID)
+}
+
+func temporaryRepIDs(room *RoomState) []string {
+	repIDs := map[string]bool{}
+	addTemporaryReps := func(pool actingPool) {
+		if len(pool.explicitReps) == 0 {
+			return
+		}
+		for _, playerID := range pool.allowedSubmitters {
+			player := room.Players[playerID]
+			if !player.IsRepresentative {
+				repIDs[playerID] = true
+			}
+		}
+	}
+	addTemporaryReps(guessingPool(room))
+	addTemporaryReps(counterGuessPool(room))
+
+	result := make([]string, 0, len(repIDs))
+	for playerID := range repIDs {
+		result = append(result, playerID)
+	}
+	sort.Strings(result)
+	return result
 }
 
 func canSeeTarget(room *RoomState, viewerID string) bool {

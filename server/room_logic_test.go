@@ -82,6 +82,10 @@ func TestUnavailableRepresentativeCreatesSingleTemporarySubmitter(t *testing.T) 
 	if !viewerTemporaryRep(&room, "bob") {
 		t.Fatalf("expected fallback player to be marked as temporary representative")
 	}
+	view := sanitizeRoomForViewer(room, "ROOM", "carol")
+	if len(view.Viewer.TemporaryRepIDs) != 1 || view.Viewer.TemporaryRepIDs[0] != "bob" {
+		t.Fatalf("expected sanitized temporary rep ids to contain bob, got %v", view.Viewer.TemporaryRepIDs)
+	}
 }
 
 func TestTemporaryRepresentativeUpdatesWhenRepresentativeObservesAndRejoins(t *testing.T) {
