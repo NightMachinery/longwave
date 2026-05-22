@@ -3,7 +3,7 @@ import { GetScore } from "../../state/GetScore";
 import { CenteredColumn, CenteredRow } from "../common/LayoutElements";
 import { Spectrum } from "../common/Spectrum";
 import { Button } from "../common/Button";
-import { GameType, Team, TeamName, TeamReverse } from "../../state/GameState";
+import { GameType, PlayersTeams, Team, TeamName, TeamReverse } from "../../state/GameState";
 import { GameModelContext } from "../../state/GameModelContext";
 import { Info } from "../common/Info";
 import { Trans, useTranslation } from "react-i18next";
@@ -316,21 +316,36 @@ function EndGameResult(props: { winner?: Team; loser?: Team }) {
     );
   }
 
+  const winner = props.winner ?? Team.Unset;
+  const loser = props.loser ?? Team.Unset;
+  const winnerNames = teamMemberNames(gameState.players, winner);
+  const loserNames = teamMemberNames(gameState.players, loser);
+  const teamScore = (team: Team) =>
+    team === Team.Left ? gameState.leftScore : team === Team.Right ? gameState.rightScore : 0;
+
   return (
     <div className="end-game-result" role="status">
       <div className="end-game-title">
         {t("viewscore.winning_team", {
-          winnerteam: TeamName(props.winner ?? Team.Unset, t),
+          winnerteam: TeamName(winner, t),
         })}
       </div>
       <div className="end-game-grid">
         <div>
           <span>{t("viewscore.winner", "Winner")}</span>
-          <strong>{TeamName(props.winner ?? Team.Unset, t)}</strong>
+          <strong>{TeamName(winner, t)}</strong>
+          <strong>
+            {t("viewscore.team_score", "Score")}: {teamScore(winner)}
+          </strong>
+          <div className="end-game-roster">{winnerNames.join(", ")}</div>
         </div>
         <div>
           <span>{t("viewscore.loser", "Loser")}</span>
-          <strong>{TeamName(props.loser ?? Team.Unset, t)}</strong>
+          <strong>{TeamName(loser, t)}</strong>
+          <strong>
+            {t("viewscore.team_score", "Score")}: {teamScore(loser)}
+          </strong>
+          <div className="end-game-roster">{loserNames.join(", ")}</div>
         </div>
         <div>
           <span>{t("viewscore.final_score", "Final score")}</span>
@@ -341,6 +356,13 @@ function EndGameResult(props: { winner?: Team; loser?: Team }) {
       </div>
     </div>
   );
+}
+
+function teamMemberNames(players: PlayersTeams, team: Team) {
+  return Object.keys(players)
+    .filter((playerId) => players[playerId].team === team && !players[playerId].isObserver)
+    .map((playerId) => players[playerId].name)
+    .sort((left, right) => left.localeCompare(right));
 }
 
 function useEndGameFanfare(isGameOver: boolean) {

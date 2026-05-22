@@ -133,6 +133,11 @@
   text-transform: uppercase;
 }
 
+.end-game-roster {
+  color: #374151;
+  line-height: 1.35;
+}
+
 @keyframes hint-arrival-pulse {
   from {
     opacity: 0;

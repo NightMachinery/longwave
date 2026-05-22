@@ -39,6 +39,29 @@ test("shows play again for moderators when the game is over", () => {
         roundPhase: RoundPhase.ViewScore,
         leftScore: 10,
         rightScore: 7,
+        players: {
+          alice: {
+            name: "Alice",
+            team: Team.Left,
+            isModerator: false,
+            isRepresentative: false,
+            isObserver: false,
+          },
+          arnold: {
+            name: "Arnold",
+            team: Team.Left,
+            isModerator: false,
+            isRepresentative: false,
+            isObserver: false,
+          },
+          bob: {
+            name: "Bob",
+            team: Team.Right,
+            isModerator: false,
+            isRepresentative: false,
+            isObserver: false,
+          },
+        },
         viewer: {
           ...InitialGameState().viewer,
           canManageRoom: true,
@@ -53,6 +76,10 @@ test("shows play again for moderators when the game is over", () => {
   expect(component.getByRole("button", { name: "Play again" })).toBeTruthy();
   expect(component.getByText("Winner")).toBeTruthy();
   expect(component.getByText("Loser")).toBeTruthy();
+  expect(component.getByText("Score: 10")).toBeTruthy();
+  expect(component.getByText("Score: 7")).toBeTruthy();
+  expect(component.getByText("Alice, Arnold")).toBeTruthy();
+  expect(component.getByText("Bob")).toBeTruthy();
   expect(component.getByText("10-7")).toBeTruthy();
 });
 
