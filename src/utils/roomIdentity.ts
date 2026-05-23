@@ -5,6 +5,8 @@ export interface StorageLike {
 
 const legacyPlayerNamePrefix = "playerName:";
 const playerNameStorageKey = "playerName";
+const userAuthStorageKey = "longwave:userAuthToken";
+const userProfileStorageKey = "longwave:userProfile";
 const migrationQueryParam = "migrate";
 
 function storageGetJSON<T>(storage: StorageLike, key: string): T | null {
@@ -32,8 +34,42 @@ export function getGlobalPlayerNameStorageKey() {
   return playerNameStorageKey;
 }
 
+export function getUserAuthStorageKey() {
+  return userAuthStorageKey;
+}
+
+export function readOrCreateUserAuthToken(storage: StorageLike) {
+  const existing = storageGetJSON<string>(storage, userAuthStorageKey);
+  if (existing && existing.trim().length > 0) {
+    return existing;
+  }
+  const token = createRandomToken();
+  storageSetJSON(storage, userAuthStorageKey, token);
+  return token;
+}
+
+export function readStoredUserDisplayName(storage: StorageLike) {
+  const profile = storageGetJSON<{ authToken?: string; displayName?: string }>(
+    storage,
+    userProfileStorageKey
+  );
+  if (profile?.displayName && profile.displayName.trim().length > 0) {
+    return profile.displayName;
+  }
+  return storageGetJSON<string>(storage, playerNameStorageKey) ?? "";
+}
+
+export function writeStoredUserDisplayName(
+  storage: StorageLike,
+  authToken: string,
+  displayName: string
+) {
+  storageSetJSON(storage, userProfileStorageKey, { authToken, displayName });
+  storageSetJSON(storage, playerNameStorageKey, displayName);
+}
+
 export function readStoredPlayerName(storage: StorageLike, roomId?: string) {
-  const globalName = storageGetJSON<string>(storage, playerNameStorageKey);
+  const globalName = readStoredUserDisplayName(storage);
   if (globalName && globalName.trim().length > 0) {
     return globalName;
   }
@@ -44,7 +80,7 @@ export function readStoredPlayerName(storage: StorageLike, roomId?: string) {
 }
 
 export function writeStoredPlayerName(storage: StorageLike, playerName: string) {
-  storageSetJSON(storage, playerNameStorageKey, playerName);
+  writeStoredUserDisplayName(storage, readOrCreateUserAuthToken(storage), playerName);
 }
 
 export function buildCanonicalRoomUrl(origin: string, roomId: string) {
@@ -62,4 +98,16 @@ export function getMigrationKey(search: string) {
   return migrationKey && migrationKey.trim().length > 0
     ? migrationKey.trim()
     : null;
+}
+
+function createRandomToken() {
+  const bytes = new Uint8Array(32);
+  if (globalThis.crypto?.getRandomValues) {
+    globalThis.crypto.getRandomValues(bytes);
+  } else {
+    for (let index = 0; index < bytes.length; index += 1) {
+      bytes[index] = Math.floor(Math.random() * 256);
+    }
+  }
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }

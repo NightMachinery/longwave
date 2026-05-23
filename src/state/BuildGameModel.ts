@@ -1,5 +1,5 @@
 import { GameState, Team } from "./GameState";
-import { RoomAction } from "../network/roomApi";
+import { RoomAction, RoomAuth } from "../network/roomApi";
 import { fallbackWordpackCards, WordpackCard } from "./Wordpack";
 
 const seedrandom: (seed: string) => () => number = require("seedrandom");
@@ -7,6 +7,7 @@ const seedrandom: (seed: string) => () => number = require("seedrandom");
 type Player = {
   id: string;
   name: string;
+  displayName?: string;
   team: Team;
   isModerator: boolean;
   isRepresentative: boolean;
@@ -19,6 +20,7 @@ export interface GameModel {
   psychics: Player[];
   spectrumCard: WordpackCard;
   previousSpectrumCard: WordpackCard | null;
+  roomAuth?: RoomAuth;
   submitAction: (action: RoomAction) => void;
   openNameEditor: () => void;
 }
@@ -52,7 +54,8 @@ export function BuildGameModel(
   gameState: GameState,
   submitAction: (action: RoomAction) => void,
   wordpackCards: WordpackCard[],
-  openNameEditor: () => void
+  openNameEditor: () => void,
+  roomAuth: RoomAuth = {}
 ): GameModel {
   const players = gameState.players ?? {};
   const psychicIds = gameState.psychicIds ?? [];
@@ -82,19 +85,23 @@ export function BuildGameModel(
           : null
       )
       .filter((player): player is Player => player !== null),
-    spectrumCard: getCardAtIndex(
-      gameState.deckSeed,
-      gameState.deckIndex,
-      wordpackCards
-    ),
+    spectrumCard:
+      gameState.currentPrompt ??
+      getCardAtIndex(
+        gameState.deckSeed,
+        gameState.deckIndex,
+        wordpackCards
+      ),
     previousSpectrumCard:
       gameState.previousTurn === null
         ? null
-        : getCardAtIndex(
-            gameState.deckSeed,
-            gameState.previousTurn.deckIndex,
-            wordpackCards
-          ),
+        : gameState.previousTurn.prompt ??
+          getCardAtIndex(
+              gameState.deckSeed,
+              gameState.previousTurn.deckIndex,
+              wordpackCards
+            ),
+    roomAuth,
     submitAction,
     openNameEditor,
   };

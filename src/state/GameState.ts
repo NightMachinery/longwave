@@ -1,6 +1,6 @@
 import { RandomFourCharacterString } from "./RandomFourCharacterString";
 import { TFunction } from "i18next";
-import { normalizeWordpack } from "./Wordpack";
+import { normalizeWordpack, WordpackCard } from "./Wordpack";
 
 export enum RoundPhase {
   SetupGame,
@@ -47,6 +47,8 @@ export function TeamName(team: Team, t: TFunction<string>) {
 
 export type PlayerState = {
   name: string;
+  displayName?: string;
+  nameOrdinal?: number;
   team: Team;
   isModerator: boolean;
   isRepresentative: boolean;
@@ -69,6 +71,7 @@ export type TurnSummaryModel = {
   gameType?: GameType;
   clueAuthorName: string;
   clues: Clue[];
+  prompt?: WordpackCard | null;
   spectrumTarget: number;
   guess: number;
   counterGuess?: "left" | "right" | "exact";
@@ -112,6 +115,7 @@ export interface GameState {
   turnsTaken: number;
   deckSeed: string;
   deckIndex: number;
+  currentPrompt: WordpackCard | null;
   spectrumTarget: number;
   clues: Clue[];
   guess: number;
@@ -151,6 +155,7 @@ export function InitialGameState(deckLanguage: string = "en"): GameState {
     turnsTaken: -1,
     deckSeed: RandomFourCharacterString(),
     deckIndex: 0,
+    currentPrompt: null,
     spectrumTarget: 0,
     clues: [],
     guess: 10,

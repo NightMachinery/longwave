@@ -97,9 +97,7 @@ func applyAction(room *RoomState, viewerID string, action ActionRequest, wordpac
 		if name == "" {
 			return fmt.Errorf("name is required")
 		}
-		player := room.Players[viewerID]
-		player.Name = name
-		room.Players[viewerID] = player
+		assignPlayerName(room, viewerID, name)
 		return nil
 	case "set_wordpack":
 		if !canManageRoom(room, viewerID) {
@@ -151,7 +149,7 @@ func applyAction(room *RoomState, viewerID string, action ActionRequest, wordpac
 			room.RoundPhase = RoundPhaseReady
 		} else {
 			resetScoresForGameType(room)
-			return startRound(room, viewerID)
+			return startRound(room, viewerID, wordpacks)
 		}
 		room.Clues = []Clue{}
 		room.PsychicIDs = []string{}
@@ -172,7 +170,7 @@ func applyAction(room *RoomState, viewerID string, action ActionRequest, wordpac
 		room.Players[viewerID] = player
 		return nil
 	case "start_round":
-		return startRound(room, viewerID)
+		return startRound(room, viewerID, wordpacks)
 	case "set_team":
 		if !canManageRoom(room, viewerID) || action.PlayerID == "" || action.Team == nil {
 			return errUnauthorized
@@ -404,7 +402,7 @@ func applyAction(room *RoomState, viewerID string, action ActionRequest, wordpac
 		if !isModerator && !isPsychic(room, viewerID) {
 			return errUnauthorized
 		}
-		return rerollRound(room, isModerator)
+		return rerollRound(room, isModerator, wordpacks)
 	case "reroll_target":
 		if !canManageRoom(room, viewerID) {
 			return errUnauthorized
@@ -737,6 +735,7 @@ func resetScoresForGameType(room *RoomState) {
 	room.CounterGuess = "left"
 	room.TurnsTaken = -1
 	room.DeckIndex = 0
+	room.CurrentPrompt = nil
 	room.ActingTeam = TeamUnset
 	room.TeamsRandomized = false
 	room.PsychicRerollsUsed = 0
@@ -759,6 +758,7 @@ func playAgainRoom(room *RoomState) {
 	room.CounterGuess = "left"
 	room.TurnsTaken = -1
 	room.DeckIndex = 0
+	room.CurrentPrompt = nil
 	room.SpectrumTarget = randomSpectrumTarget()
 	room.PsychicPickCounts = map[string]int{}
 	room.PsychicRerollsUsed = 0
@@ -886,7 +886,7 @@ func assignNewPlayerToBalancedTeam(room *RoomState, playerID string) {
 	room.Players[playerID] = player
 }
 
-func rerollRound(room *RoomState, isModerator bool) error {
+func rerollRound(room *RoomState, isModerator bool, wordpackCatalogs ...*WordpackCatalog) error {
 	if err := validateRerollTiming(room, "prompt"); err != nil {
 		return err
 	}
@@ -894,6 +894,15 @@ func rerollRound(room *RoomState, isModerator bool) error {
 		return fmt.Errorf("psychic reroll limit reached")
 	}
 	room.DeckIndex += 1
+	var wordpacks *WordpackCatalog
+	if len(wordpackCatalogs) > 0 {
+		wordpacks = wordpackCatalogs[0]
+	}
+	prompt, err := drawRoomPrompt(room, wordpacks)
+	if err != nil {
+		return err
+	}
+	room.CurrentPrompt = prompt
 	room.Guess = 10
 	room.CounterGuess = "left"
 	room.Clues = []Clue{}
@@ -901,6 +910,21 @@ func rerollRound(room *RoomState, isModerator bool) error {
 		room.PsychicRerollsUsed += 1
 	}
 	return nil
+}
+
+func drawRoomPrompt(room *RoomState, wordpacks *WordpackCatalog) (*WordpackCard, error) {
+	if wordpacks == nil {
+		wordpacks = NewWordpackCatalog(defaultWordpackDir)
+	}
+	return wordpacks.DrawCard(room.DeckSeed, room.DeckIndex, room.Wordpacks, room.Wordpack)
+}
+
+func cloneWordpackCard(card *WordpackCard) *WordpackCard {
+	if card == nil {
+		return nil
+	}
+	clone := *card
+	return &clone
 }
 
 func rerollTarget(room *RoomState) error {
@@ -992,7 +1016,11 @@ func nextTeamAfterScore(room *RoomState) Team {
 	return nextTeam
 }
 
-func startRound(room *RoomState, viewerID string) error {
+func startRound(room *RoomState, viewerID string, wordpackCatalogs ...*WordpackCatalog) error {
+	var wordpacks *WordpackCatalog
+	if len(wordpackCatalogs) > 0 {
+		wordpacks = wordpackCatalogs[0]
+	}
 	player, ok := room.Players[viewerID]
 	if !ok || player.IsObserver {
 		return errUnauthorized
@@ -1056,6 +1084,7 @@ func startRound(room *RoomState, viewerID string) error {
 			GameType:          previousGameType,
 			ClueAuthorName:    clueAuthorName,
 			Clues:             append([]Clue(nil), room.Clues...),
+			Prompt:            cloneWordpackCard(room.CurrentPrompt),
 			SpectrumTarget:    room.SpectrumTarget,
 			Guess:             room.Guess,
 			CounterGuess:      previousCounterGuess,
@@ -1066,6 +1095,11 @@ func startRound(room *RoomState, viewerID string) error {
 	room.RoundPhase = RoundPhaseGiveClue
 	room.TurnsTaken += 1
 	room.DeckIndex += 1
+	prompt, err := drawRoomPrompt(room, wordpacks)
+	if err != nil {
+		return err
+	}
+	room.CurrentPrompt = prompt
 	room.SpectrumTarget = randomSpectrumTarget()
 	room.Clues = []Clue{}
 	room.Guess = 10
@@ -1287,12 +1321,14 @@ func sanitizeRoomForViewer(room RoomState, roomID string, viewerID string) RoomV
 	normalizeRoomStateShape(&room)
 	view := RoomView{RoomState: room, RoomID: roomID}
 	view.MigrationTokens = nil
+	view.NameOrdinalAssignments = nil
 	view.PsychicPickCounts = nil
 	view.RedirectRoomID = ""
 	view.IndividualDraftGuesses = map[string]int{}
 	players := map[string]PlayerState{}
 	for playerID, player := range room.Players {
 		player.SessionSecret = ""
+		player.UserAuthHash = ""
 		players[playerID] = player
 	}
 	view.Players = players

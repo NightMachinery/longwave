@@ -1,10 +1,15 @@
 import React, { ReactNode, useContext } from "react";
 import { useTranslation } from "react-i18next";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faUserPlus } from "@fortawesome/free-solid-svg-icons";
 import { RoomAction } from "../../network/roomApi";
+import { requestMigrationLink } from "../../network/roomApi";
 import { GameModelContext } from "../../state/GameModelContext";
 import { GameType, RoundPhase, Team, TeamName } from "../../state/GameState";
 import { Button } from "../common/Button";
 import { playerMarkerColor } from "./IndividualGuessMarkers";
+import { buildMigratedRoomUrl } from "../../utils/roomIdentity";
+import { copyTextToClipboard } from "../../utils/copyTextToClipboard";
 
 const cardStyle: React.CSSProperties = {
   width: "100%",
@@ -32,7 +37,7 @@ export function PlayerManagementCard(props: {
   submitAction: (action: RoomAction) => void;
 }) {
   const { t } = useTranslation();
-  const { gameState, localPlayer } = useContext(GameModelContext);
+  const { gameState, localPlayer, roomAuth } = useContext(GameModelContext);
   const player = gameState.players[props.playerId];
   const isLocalPlayer = props.playerId === localPlayer.id;
   const isCreator = props.playerId === gameState.creatorId;
@@ -43,6 +48,13 @@ export function PlayerManagementCard(props: {
   if (!player) {
     return null;
   }
+  const displayName = player.displayName ?? player.name;
+  const copyMigrateLinkLabel = String(
+    t("playercard.copy_migrate_link", {
+      defaultValue: "Copy migrate link for {{name}}",
+      name: displayName,
+    })
+  );
 
   const badges = [
     isCreator ? t("playercard.creator", "Creator") : null,
@@ -74,7 +86,9 @@ export function PlayerManagementCard(props: {
       data-testid={`player-card-${props.playerId}`}
       style={{
         ...cardStyle,
-        backgroundColor: player.isObserver ? "#f9fafb" : "#ffffff",
+        backgroundColor: isLocalPlayer ? "#eff6ff" : player.isObserver ? "#f9fafb" : "#ffffff",
+        borderColor: isLocalPlayer ? "#2563eb" : "#d1d5db",
+        boxShadow: isLocalPlayer ? "inset 4px 0 0 #2563eb" : undefined,
       }}
     >
       <div
@@ -101,13 +115,13 @@ export function PlayerManagementCard(props: {
                 color={playerMarkerColor(props.playerId)}
                 label={
                   needsIndividualGuess
-                    ? `${player.name} needs to guess`
-                    : `${player.name} marker color`
+                    ? `${displayName} needs to guess`
+                    : `${displayName} marker color`
                 }
                 pendingGuess={needsIndividualGuess}
               />
             )}
-            <span>{player.name}</span>
+            <span>{displayName}</span>
           </div>
           <div style={{ color: "#6b7280", fontSize: 14 }}>
             {player.isObserver
@@ -118,6 +132,34 @@ export function PlayerManagementCard(props: {
           </div>
         </div>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+          {canManageRoom && (
+            <button
+              type="button"
+              aria-label={copyMigrateLinkLabel}
+              title={copyMigrateLinkLabel}
+              onClick={() => {
+                void requestMigrationLink(gameState.roomId, roomAuth, props.playerId).then(
+                  (serverURL) => {
+                    const url = serverURL.startsWith("http")
+                      ? serverURL
+                      : buildMigratedRoomUrl(window.location.origin, gameState.roomId, serverURL);
+                    return copyTextToClipboard(url);
+                  }
+                );
+              }}
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 999,
+                border: "1px solid #d1d5db",
+                background: "#ffffff",
+                color: "#374151",
+                cursor: "pointer",
+              }}
+            >
+              <FontAwesomeIcon icon={faUserPlus} />
+            </button>
+          )}
           {badges.map((badge) => (
             <span key={badge} style={chipStyle}>
               {badge}

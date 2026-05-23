@@ -146,7 +146,7 @@ export function RoomMenu(props: {
   showNotice: (notice: Notice) => void;
 }) {
   const { t } = useTranslation();
-  const { gameState, localPlayer, openNameEditor, submitAction } = useContext(GameModelContext);
+  const { gameState, localPlayer, openNameEditor, roomAuth, submitAction } = useContext(GameModelContext);
   const [isEditingGameSettings, setIsEditingGameSettings] = useState(false);
   const [hintVisualEffects, setHintVisualEffects] = useBooleanPreference(hintVisualEffectsKey, true);
   const [hintSoundEffects, setHintSoundEffects] = useBooleanPreference(hintSoundEffectsKey, true);
@@ -186,7 +186,9 @@ export function RoomMenu(props: {
       <div
         {...menuItemProps}
         onClick={() => {
-          void requestMigrationLink(props.roomId)
+          void (roomAuth
+            ? requestMigrationLink(props.roomId, roomAuth)
+            : requestMigrationLink(props.roomId))
             .then((serverURL) => {
               const url = serverURL.startsWith("http")
                 ? serverURL

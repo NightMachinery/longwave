@@ -82,7 +82,9 @@ function IndividualScoreList(props: { submitAction: (action: RoomAction) => void
       if (scoreDelta !== 0) {
         return scoreDelta;
       }
-      return gameState.players[left].name.localeCompare(gameState.players[right].name);
+      return (gameState.players[left].displayName ?? gameState.players[left].name).localeCompare(
+        gameState.players[right].displayName ?? gameState.players[right].name
+      );
     });
 
   return (
@@ -91,7 +93,7 @@ function IndividualScoreList(props: { submitAction: (action: RoomAction) => void
       {activePlayerIds.map((playerId) => (
         <div key={playerId} style={{ marginBottom: 10 }}>
           <div style={{ marginBottom: 4, fontWeight: 700 }}>
-            {gameState.players[playerId].name}:{" "}
+            {gameState.players[playerId].displayName ?? gameState.players[playerId].name}:{" "}
             {(gameState.individualScores[playerId] ?? 0).toFixed(1)}{" "}
             {t("scoreboard.points")}
             {" · "}

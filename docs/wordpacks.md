@@ -2,7 +2,7 @@
 
 Built-in wordpacks live in `wordpacks/*.jsonl`. Each non-empty line is a JSON object with `left.text` and `right.text` fields, and room moderators can choose one or more discovered wordpacks during setup or from room settings.
 
-The frontend should render labels from the currently selected wordpack responses. When multiple wordpacks are selected, prompts are drawn from the combined union with exact duplicate cards removed. Fallback cards are only a temporary loading/error state and must not be cached across wordpack changes.
+When multiple wordpacks are selected, prompts are drawn from the combined union with exact duplicate cards removed. The server persists the full prompt pair object drawn for each current and previous round, including side metadata such as colors, so changing room wordpack settings only affects future prompt draws. Fallback cards are only a temporary loading/error state and must not be cached across wordpack changes.
 
 ## Built-in decks
 

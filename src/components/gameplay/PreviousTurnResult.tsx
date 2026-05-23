@@ -4,6 +4,7 @@ import { CenteredColumn } from "../common/LayoutElements";
 import { Spectrum } from "../common/Spectrum";
 import { GameModelContext } from "../../state/GameModelContext";
 import { useTranslation } from "react-i18next";
+import { TFunction } from "i18next";
 import { GetScore } from "../../state/GetScore";
 import { buildIndividualGuessMarkers } from "./IndividualGuessMarkers";
 
@@ -74,13 +75,19 @@ function PreviousRoundScoreSummary(props: {
     const guesserIds = Object.keys(props.individualGuesses)
       .filter((playerId) => props.individualGuesses[playerId] >= 0)
       .sort((left, right) =>
-        (gameState.players[left]?.name ?? left).localeCompare(gameState.players[right]?.name ?? right)
+        (gameState.players[left]?.displayName ?? gameState.players[left]?.name ?? left).localeCompare(
+          gameState.players[right]?.displayName ?? gameState.players[right]?.name ?? right
+        )
       );
     return (
       <div>
         {guesserIds.map((playerId) => (
           <div key={playerId}>
-            <strong>{gameState.players[playerId]?.name ?? playerId}</strong>:{" "}
+            <strong>
+              {gameState.players[playerId]?.displayName ??
+                gameState.players[playerId]?.name ??
+                playerId}
+            </strong>:{" "}
             {props.individualGuesses[playerId]} (
             {GetScore(props.spectrumTarget, props.individualGuesses[playerId])}{" "}
             {t("viewscore.points")})
@@ -116,9 +123,23 @@ function PreviousRoundScoreSummary(props: {
       <div>
         {TeamName(TeamReverse(props.actingTeam), t)} {t("viewscore.got")}{" "}
         {wasCounterGuessCorrect
-          ? t("viewscore.1_point_correct_guess")
-          : t("viewscore.0_point_wrong_guess")}
+          ? t("viewscore.1_point_correct_guess", {
+              counterguess: counterGuessLabel(counterGuess, t),
+            })
+          : t("viewscore.0_point_wrong_guess", {
+              counterguess: counterGuessLabel(counterGuess, t),
+            })}
       </div>
     </div>
   );
+}
+
+function counterGuessLabel(counterGuess: "left" | "right" | "exact", t: TFunction) {
+  if (counterGuess === "left") {
+    return t("counterguess.more_left");
+  }
+  if (counterGuess === "right") {
+    return t("counterguess.more_right");
+  }
+  return t("counterguess.exact", "Target is exactly here");
 }

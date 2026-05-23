@@ -16,6 +16,7 @@ export const GameModelContext = createContext<GameModel>({
   psychics: [],
   spectrumCard: fallbackWordpackCards[0],
   previousSpectrumCard: null,
+  roomAuth: {},
   submitAction: (action) => {
     console.warn(
       "GameModelContext not provided. Got submitAction: " +

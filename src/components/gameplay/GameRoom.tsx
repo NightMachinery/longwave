@@ -16,6 +16,7 @@ import { CenteredColumn } from "../common/LayoutElements";
 import { useWordpackCards } from "../hooks/useWordpackCards";
 import {
   getMigrationKey,
+  readOrCreateUserAuthToken,
   readStoredPlayerName,
   writeStoredPlayerName,
 } from "../../utils/roomIdentity";
@@ -29,6 +30,7 @@ export function GameRoom() {
   }
 
   const migrationKey = useMemo(() => getMigrationKey(location.search), [location.search]);
+  const [userAuthToken] = useState(() => readOrCreateUserAuthToken(localStorage));
   const [playerName, setPlayerNameState] = useState(() =>
     readStoredPlayerName(localStorage, roomId)
   );
@@ -38,14 +40,17 @@ export function GameRoom() {
     setPlayerNameState(readStoredPlayerName(localStorage, roomId));
   }, [roomId]);
 
-  const persistPlayerName = useCallback((nextPlayerName: string) => {
-    writeStoredPlayerName(localStorage, nextPlayerName);
+  const persistPlayerName = useCallback((nextPlayerName: string, options?: { localOnly?: boolean }) => {
+    if (!options?.localOnly) {
+      writeStoredPlayerName(localStorage, nextPlayerName);
+    }
     setPlayerNameState(nextPlayerName);
   }, []);
 
   const [gameState, submitAction, connectionError] = useNetworkBackedGameState({
     roomId,
     playerName,
+    userAuthToken,
     migrationKey,
   });
   const wordpackCards = useWordpackCards(gameState?.wordpacks ?? gameState?.wordpack);
@@ -55,9 +60,9 @@ export function GameRoom() {
     const syncedPlayerName = gameState?.players?.[gameState.viewer.playerId]?.name ?? "";
 
     if (syncedPlayerName.length > 0 && syncedPlayerName !== playerName) {
-      persistPlayerName(syncedPlayerName);
+      persistPlayerName(syncedPlayerName, { localOnly: migrationKey !== null });
     }
-  }, [gameState, persistPlayerName, playerName]);
+  }, [gameState, migrationKey, persistPlayerName, playerName]);
 
   useEffect(() => {
     if (!gameState) {
@@ -66,7 +71,7 @@ export function GameRoom() {
     if (gameState.roomId.length === 0) {
       return;
     }
-    const canCanonicalizeRoute = playerName.trim().length > 0 || migrationKey === null;
+    const canCanonicalizeRoute = migrationKey === null && playerName.trim().length > 0;
     if (!canCanonicalizeRoute) {
       return;
     }
@@ -93,7 +98,7 @@ export function GameRoom() {
           if (trimmedName.length === 0) {
             return;
           }
-          persistPlayerName(trimmedName);
+          persistPlayerName(trimmedName, { localOnly: migrationKey !== null });
           submitAction({ type: "set_name", name: trimmedName });
           setIsEditingName(false);
         }}
@@ -114,9 +119,15 @@ export function GameRoom() {
     return null;
   }
 
-  const gameModel = BuildGameModel(gameState, submitAction, wordpackCards, () => {
-    setIsEditingName(true);
-  });
+  const gameModel = BuildGameModel(
+    gameState,
+    submitAction,
+    wordpackCards,
+    () => {
+      setIsEditingName(true);
+    },
+    { userAuthToken, migrationKey }
+  );
 
   return (
     <GameModelContext.Provider value={gameModel}>

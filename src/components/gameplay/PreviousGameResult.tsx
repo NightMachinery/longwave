@@ -25,7 +25,12 @@ export function PreviousGameResultBanner() {
         ? t("previousgameresult.individual", {
             defaultValue: "Previous Individual winner: {{winner}}.",
             winner: (result.winnerIds ?? [])
-              .map((playerId) => gameState.players[playerId]?.name ?? playerId)
+              .map(
+                (playerId) =>
+                  gameState.players[playerId]?.displayName ??
+                  gameState.players[playerId]?.name ??
+                  playerId
+              )
               .join(", "),
           })
         : t("previousgameresult.coop", {

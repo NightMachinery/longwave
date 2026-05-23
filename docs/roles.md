@@ -51,11 +51,12 @@ The backend now filters room views per player session:
 
 ## Session and migration model
 
-Room access now uses a room-scoped server session cookie instead of the older `roomAuth` URL-sharing model. The client joins the room before it opens authenticated event streams.
+Room access uses a browser-local user auth token as the primary identity. The server associates the token with the in-room player and also sets a session cookie as a compatibility fallback.
 
 - **Copy room link** shares the clean room URL.
-- **Migrate device** asks the server for a one-time migration link.
-- Opening that migration link on another device transfers the same in-room identity there.
+- **Migrate device** asks the server for a durable room-specific `?migrate=...` link.
+- Opening that migration link on another device uses the same in-room identity without exposing the user auth token. The migrate id stays in the URL so refresh keeps the same migrated identity.
+- Moderators can copy a migrate-device link for any player from that player's card.
 - **Reroll prompt** is available to moderators and current psychics during clueing before any clue is submitted; it draws new spectrum labels while keeping the current psychics and true target.
 - **Reroll Target** is available only to moderators during clueing before any clue is submitted; it draws a new true target while keeping the current prompt labels.
 - **Play Again** resets the current game while preserving the room, creator, player list, room settings, and a summary of the previous winner/score.

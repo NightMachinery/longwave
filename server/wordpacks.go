@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"hash/fnv"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"sort"
@@ -157,4 +159,44 @@ func normalizeWordpackList(ids []string, fallback string) []string {
 		normalized = append(normalized, normalizeWordpack(fallback))
 	}
 	return normalized
+}
+
+func (catalog *WordpackCatalog) DrawCard(seed string, deckIndex int, wordpacks []string, fallback string) (*WordpackCard, error) {
+	selectedWordpacks := normalizeWordpackList(wordpacks, fallback)
+	cards := []WordpackCard{}
+	seen := map[string]struct{}{}
+	for _, wordpack := range selectedWordpacks {
+		loadedCards, err := catalog.Load(wordpack)
+		if err != nil {
+			return nil, err
+		}
+		for _, card := range loadedCards {
+			keyBytes, _ := json.Marshal(card)
+			key := string(keyBytes)
+			if _, ok := seen[key]; ok {
+				continue
+			}
+			seen[key] = struct{}{}
+			cards = append(cards, card)
+		}
+	}
+	if len(cards) == 0 {
+		return nil, fmt.Errorf("no prompt cards available")
+	}
+	shuffled := append([]WordpackCard(nil), cards...)
+	rng := rand.New(rand.NewSource(promptSeed(seed)))
+	rng.Shuffle(len(shuffled), func(i, j int) {
+		shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
+	})
+	if deckIndex < 0 {
+		deckIndex = 0
+	}
+	card := shuffled[deckIndex%len(shuffled)]
+	return &card, nil
+}
+
+func promptSeed(seed string) int64 {
+	hasher := fnv.New64a()
+	_, _ = hasher.Write([]byte(seed))
+	return int64(hasher.Sum64())
 }

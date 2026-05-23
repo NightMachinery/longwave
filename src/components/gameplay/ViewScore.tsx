@@ -7,6 +7,7 @@ import { GameType, PlayersTeams, Team, TeamName, TeamReverse } from "../../state
 import { GameModelContext } from "../../state/GameModelContext";
 import { Info } from "../common/Info";
 import { Trans, useTranslation } from "react-i18next";
+import { TFunction } from "i18next";
 import { buildIndividualGuessMarkers } from "./IndividualGuessMarkers";
 
 export function ViewScore() {
@@ -60,9 +61,14 @@ export function ViewScore() {
         </div>
         {gameState.gameType === GameType.Teams && (
           <div>
-            {TeamName(TeamReverse(gameState.actingTeam), t)} {t("viewscore.got")} {wasCounterGuessCorrect
-              ? t("viewscore.1_point_correct_guess")
-              : t("viewscore.0_point_wrong_guess")}
+            {TeamName(TeamReverse(gameState.actingTeam), t)} {t("viewscore.got")}{" "}
+            {wasCounterGuessCorrect
+              ? t("viewscore.1_point_correct_guess", {
+                  counterguess: counterGuessLabel(gameState.counterGuess, t),
+                })
+              : t("viewscore.0_point_wrong_guess", {
+                  counterguess: counterGuessLabel(gameState.counterGuess, t),
+                })}
           </div>
         )}
         {bonusCoopTurn && (
@@ -85,12 +91,14 @@ function IndividualScoreReveal(props: { isGameOver: boolean }) {
   const clueGiverId = gameState.psychicIds[0];
   const clueGiverName =
     clueGiverId && gameState.players[clueGiverId]
-      ? gameState.players[clueGiverId].name
+      ? gameState.players[clueGiverId].displayName ?? gameState.players[clueGiverId].name
       : t("gamestate.the_player");
   const guesserIds = Object.keys(gameState.individualGuesses)
     .filter((playerId) => gameState.individualGuesses[playerId] >= 0)
     .sort((left, right) =>
-      (gameState.players[left]?.name ?? left).localeCompare(gameState.players[right]?.name ?? right)
+      (gameState.players[left]?.displayName ?? gameState.players[left]?.name ?? left).localeCompare(
+        gameState.players[right]?.displayName ?? gameState.players[right]?.name ?? right
+      )
     );
   const roundScores = guesserIds.map((playerId) =>
     GetScore(gameState.spectrumTarget, gameState.individualGuesses[playerId])
@@ -130,7 +138,11 @@ function IndividualScoreReveal(props: { isGameOver: boolean }) {
         <div>
           {guesserIds.map((playerId) => (
             <div key={playerId}>
-              <strong>{gameState.players[playerId]?.name ?? playerId}</strong>:{" "}
+              <strong>
+                {gameState.players[playerId]?.displayName ??
+                  gameState.players[playerId]?.name ??
+                  playerId}
+              </strong>:{" "}
               {gameState.individualGuesses[playerId]} (
               {GetScore(gameState.spectrumTarget, gameState.individualGuesses[playerId])}{" "}
               {t("viewscore.points")})
@@ -145,7 +157,12 @@ function IndividualScoreReveal(props: { isGameOver: boolean }) {
                 {t("viewscore.individual_winners", {
                   defaultValue: "Winner: {{winners}}",
                   winners: winnerIds
-                    .map((playerId) => gameState.players[playerId]?.name ?? playerId)
+                    .map(
+                      (playerId) =>
+                        gameState.players[playerId]?.displayName ??
+                        gameState.players[playerId]?.name ??
+                        playerId
+                    )
                     .join(", "),
                 })}
               </div>
@@ -179,7 +196,9 @@ function IndividualStandings() {
       if (scoreDelta !== 0) {
         return scoreDelta;
       }
-      return gameState.players[left].name.localeCompare(gameState.players[right].name);
+      return (gameState.players[left].displayName ?? gameState.players[left].name).localeCompare(
+        gameState.players[right].displayName ?? gameState.players[right].name
+      );
     });
 
   return (
@@ -187,7 +206,8 @@ function IndividualStandings() {
       <div style={{ fontWeight: 700 }}>{t("viewscore.standings", "Standings")}</div>
       {playerIds.map((playerId) => (
         <div key={playerId}>
-          {gameState.players[playerId].name}: {(gameState.individualScores[playerId] ?? 0).toFixed(1)}
+          {gameState.players[playerId].displayName ?? gameState.players[playerId].name}:{" "}
+          {(gameState.individualScores[playerId] ?? 0).toFixed(1)}
         </div>
       ))}
     </div>
@@ -222,6 +242,16 @@ function individualWinnerIds(gameState: { players: Record<string, { isObserver: 
     }
   });
   return winners;
+}
+
+function counterGuessLabel(counterGuess: "left" | "right" | "exact", t: TFunction) {
+  if (counterGuess === "left") {
+    return t("counterguess.more_left");
+  }
+  if (counterGuess === "right") {
+    return t("counterguess.more_right");
+  }
+  return t("counterguess.exact", "Target is exactly here");
 }
 
 function NextTurnOrEndGame() {
@@ -361,7 +391,7 @@ function EndGameResult(props: { winner?: Team; loser?: Team }) {
 function teamMemberNames(players: PlayersTeams, team: Team) {
   return Object.keys(players)
     .filter((playerId) => players[playerId].team === team && !players[playerId].isObserver)
-    .map((playerId) => players[playerId].name)
+    .map((playerId) => players[playerId].displayName ?? players[playerId].name)
     .sort((left, right) => left.localeCompare(right));
 }
 

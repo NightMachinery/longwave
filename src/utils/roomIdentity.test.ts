@@ -4,7 +4,11 @@ import {
   getGlobalPlayerNameStorageKey,
   getMigrationKey,
   getPlayerNameStorageKey,
+  getUserAuthStorageKey,
+  readOrCreateUserAuthToken,
   readStoredPlayerName,
+  readStoredUserDisplayName,
+  writeStoredUserDisplayName,
   writeStoredPlayerName,
 } from "./roomIdentity";
 
@@ -26,6 +30,24 @@ describe("roomIdentity", () => {
     writeStoredPlayerName(storage, "Alice");
 
     expect(storage.getItem(storageKey)).toBe(JSON.stringify("Alice"));
+    expect(readStoredPlayerName(storage, "ROOM")).toBe("Alice");
+  });
+
+  it("creates and reuses a user auth token", () => {
+    const storage = createStorage();
+    const firstToken = readOrCreateUserAuthToken(storage);
+    const secondToken = readOrCreateUserAuthToken(storage);
+
+    expect(firstToken).toHaveLength(64);
+    expect(secondToken).toBe(firstToken);
+    expect(storage.getItem(getUserAuthStorageKey())).toBe(JSON.stringify(firstToken));
+  });
+
+  it("stores display names with the user profile", () => {
+    const storage = createStorage();
+    writeStoredUserDisplayName(storage, "auth-token", "Alice");
+
+    expect(readStoredUserDisplayName(storage)).toBe("Alice");
     expect(readStoredPlayerName(storage, "ROOM")).toBe("Alice");
   });
 

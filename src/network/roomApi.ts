@@ -50,6 +50,22 @@ export class RoomApiError extends Error {
 const roomApiPath = (roomId: string) =>
   `/api/rooms/${encodeURIComponent(roomId)}`;
 
+export type RoomAuth = {
+  userAuthToken?: string;
+  migrationKey?: string | null;
+};
+
+function authHeaders(auth?: RoomAuth): Record<string, string> {
+  const headers: Record<string, string> = {};
+  if (auth?.userAuthToken) {
+    headers["X-Longwave-User-Auth"] = auth.userAuthToken;
+  }
+  if (auth?.migrationKey) {
+    headers["X-Longwave-Room-Auth"] = auth.migrationKey;
+  }
+  return headers;
+}
+
 async function parseJsonResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const responseText = await response.text();
@@ -72,6 +88,7 @@ async function parseJsonResponse<T>(response: Response): Promise<T> {
 export async function joinRoom(args: {
   roomId: string;
   playerName: string;
+  userAuthToken?: string;
   migrationKey?: string | null;
   deckLanguage?: string;
 }): Promise<GameState> {
@@ -80,9 +97,11 @@ export async function joinRoom(args: {
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
+      ...authHeaders(args),
     },
     body: JSON.stringify({
       playerName: args.playerName,
+      userAuthToken: args.userAuthToken,
       migrationKey: args.migrationKey,
       deckLanguage: args.deckLanguage,
     }),
@@ -91,10 +110,11 @@ export async function joinRoom(args: {
   return parseJsonResponse<GameState>(response);
 }
 
-export async function fetchRoom(roomId: string): Promise<GameState> {
+export async function fetchRoom(roomId: string, auth?: RoomAuth): Promise<GameState> {
   const response = await fetch(roomApiPath(roomId), {
     headers: {
       Accept: "application/json",
+      ...authHeaders(auth),
     },
   });
 
@@ -103,13 +123,15 @@ export async function fetchRoom(roomId: string): Promise<GameState> {
 
 export async function postRoomAction(
   roomId: string,
-  action: RoomAction
+  action: RoomAction,
+  auth?: RoomAuth
 ): Promise<GameState> {
   const response = await fetch(`${roomApiPath(roomId)}/actions`, {
     method: "POST",
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
+      ...authHeaders(auth),
     },
     body: JSON.stringify(action),
   });
@@ -133,14 +155,19 @@ export async function fetchWordpackCards(wordpack: string): Promise<WordpackCard
   return parseJsonResponse<WordpackCard[]>(response);
 }
 
-export async function requestMigrationLink(roomId: string): Promise<string> {
+export async function requestMigrationLink(
+  roomId: string,
+  auth?: RoomAuth,
+  playerId?: string
+): Promise<string> {
   const response = await fetch(`${roomApiPath(roomId)}/migrate`, {
     method: "POST",
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
+      ...authHeaders(auth),
     },
-    body: JSON.stringify({}),
+    body: JSON.stringify(playerId ? { playerId } : {}),
   });
 
   const payload = await parseJsonResponse<{ url: string }>(response);
@@ -149,10 +176,15 @@ export async function requestMigrationLink(roomId: string): Promise<string> {
 
 export function subscribeToRoom(
   roomId: string,
+  auth: RoomAuth | undefined,
   onStateChange: (nextGameState: GameState) => void,
   onError?: (error: Event) => void
 ) {
-  const eventSource = new EventSource(`${roomApiPath(roomId)}/events`);
+  const url = new URL(`${roomApiPath(roomId)}/events`, window.location.origin);
+  if (auth?.migrationKey) {
+    url.searchParams.set("migrate", auth.migrationKey);
+  }
+  const eventSource = new EventSource(`${url.pathname}${url.search}`);
 
   eventSource.onmessage = (event) => {
     onStateChange(JSON.parse(event.data) as GameState);
@@ -192,8 +224,10 @@ export function normalizeGameStatePayload(gameState: Partial<GameState>): GameSt
         : {
             ...gameState.previousTurn,
             clues: gameState.previousTurn.clues ?? [],
+            prompt: gameState.previousTurn.prompt ?? null,
             individualGuesses: gameState.previousTurn.individualGuesses ?? {},
           },
+    currentPrompt: gameState.currentPrompt ?? initialState.currentPrompt,
     previousGameResult: gameState.previousGameResult ?? null,
     individualScores: gameState.individualScores ?? initialState.individualScores,
     individualGuesses: gameState.individualGuesses ?? initialState.individualGuesses,

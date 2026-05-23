@@ -104,15 +104,15 @@ That flow replaces the old Firebase runtime dependency with a local Go + SQLite 
 
 ## Room identity and sharing
 
-- Each room now uses a server-issued room session cookie.
+- Each browser stores a local user auth token and saved display name. The server associates that token with the in-room player so refreshes do not create duplicate users when cookies are lost.
 - The first player to join a room becomes the creator and an initial moderator.
 - **Copy room link** shares the clean room URL only.
 - Clicking the visible room ID copies the same clean invite link.
-- **Migrate device** requests a one-time migration link with `?migrate=...` so another device can take over the same in-room identity.
+- **Migrate device** copies a durable room-specific `?migrate=...` link so another device can use the same in-room identity without exposing the user auth token.
 - **Play Again** restarts the game in the same room while preserving the creator, player list, and room settings.
 - In team mode, moderators can use default-on balanced random team assignment, new joiners are placed on the smaller team, and moderators can still adjust non-psychic players manually.
 - In individual mode, each active non-clue-giver submits a private guess, guessers score normally, and moderators can configure how many times everyone must be clue-giver before final scoring.
-- Current psychics can reroll prompts before clues are submitted up to the moderator-configured per-round limit; moderators can reroll without using that limit.
+- Current psychics can reroll prompts before clues are submitted up to the moderator-configured per-round limit; moderators can reroll without using that limit. Each round stores the full prompt pair object that was drawn, so later wordpack changes do not rewrite current or previous prompts.
 - **Reset Room ID** rotates the room code so the previous join link no longer accepts new joins.
 - Hidden round information is filtered by the backend so only current psychics see the target during clueing.
 - Player names are remembered locally per browser and **Change Name** updates the live in-room identity.

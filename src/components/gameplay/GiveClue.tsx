@@ -50,7 +50,8 @@ export function GiveClue() {
           </div>
           {psychics.length > 0 && (
             <div>
-              {t("giveclue.current_psychics", "Current psychics")}: {psychics.map((psychic) => psychic.name).join(", ")}
+              {t("giveclue.current_psychics", "Current psychics")}:{" "}
+              {psychics.map((psychic) => psychic.displayName ?? psychic.name).join(", ")}
             </div>
           )}
         </CenteredColumn>

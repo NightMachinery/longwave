@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -119,6 +120,148 @@ func TestRoomJoinActionFilteringAndEventStream(t *testing.T) {
 	}
 }
 
+func TestUserAuthTokenPreventsDuplicatePlayersWhenCookieIsMissing(t *testing.T) {
+	t.Parallel()
+
+	testServer := newTestHTTPServer(t)
+	defer testServer.Close()
+
+	firstJoin := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/join", map[string]any{
+		"playerName":    "Alice",
+		"userAuthToken": "alice-user-auth",
+	})
+	if firstJoin.StatusCode != http.StatusOK {
+		t.Fatalf("expected first join to return 200, got %d", firstJoin.StatusCode)
+	}
+	firstBody := decodeBody[RoomView](t, firstJoin.Body)
+
+	retryWithoutCookie := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/join", map[string]any{
+		"playerName":    "Alice",
+		"userAuthToken": "alice-user-auth",
+	})
+	if retryWithoutCookie.StatusCode != http.StatusOK {
+		t.Fatalf("expected retry join to return 200, got %d", retryWithoutCookie.StatusCode)
+	}
+	retryBody := decodeBody[RoomView](t, retryWithoutCookie.Body)
+	if retryBody.Viewer.PlayerID != firstBody.Viewer.PlayerID {
+		t.Fatalf("expected same viewer id, got %q then %q", firstBody.Viewer.PlayerID, retryBody.Viewer.PlayerID)
+	}
+	if len(retryBody.Players) != 1 {
+		t.Fatalf("expected one player after retry without cookie, got %d", len(retryBody.Players))
+	}
+}
+
+func TestMigrateLinkIsDurableAndModeratorCanCreatePlayerLinks(t *testing.T) {
+	t.Parallel()
+
+	testServer := newTestHTTPServer(t)
+	defer testServer.Close()
+
+	aliceJoin := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/join", map[string]any{
+		"playerName":    "Alice",
+		"userAuthToken": "alice-user-auth",
+	})
+	if aliceJoin.StatusCode != http.StatusOK {
+		t.Fatalf("expected alice join to return 200, got %d", aliceJoin.StatusCode)
+	}
+	aliceCookie := aliceJoin.Cookies()[0]
+
+	bobJoin := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/join", map[string]any{
+		"playerName":    "Bob",
+		"userAuthToken": "bob-user-auth",
+	})
+	if bobJoin.StatusCode != http.StatusOK {
+		t.Fatalf("expected bob join to return 200, got %d", bobJoin.StatusCode)
+	}
+	bobBody := decodeBody[RoomView](t, bobJoin.Body)
+
+	migrateBob := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/migrate", map[string]any{
+		"playerId": bobBody.Viewer.PlayerID,
+	}, aliceCookie)
+	if migrateBob.StatusCode != http.StatusOK {
+		t.Fatalf("expected moderator migrate link to return 200, got %d", migrateBob.StatusCode)
+	}
+	migrateBody := decodeBody[migrateResponse](t, migrateBob.Body)
+	migrationToken := migrationTokenFromURL(t, migrateBody.URL)
+	if migrationToken == "" || migrationToken == "bob-user-auth" {
+		t.Fatalf("expected opaque room-specific migration token, got %q", migrationToken)
+	}
+
+	migratedJoin := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/join", map[string]any{
+		"migrationKey":  migrationToken,
+		"userAuthToken": "other-browser-auth",
+	})
+	if migratedJoin.StatusCode != http.StatusOK {
+		t.Fatalf("expected migrated join to return 200, got %d", migratedJoin.StatusCode)
+	}
+	migratedBody := decodeBody[RoomView](t, migratedJoin.Body)
+	if migratedBody.Viewer.PlayerID != bobBody.Viewer.PlayerID {
+		t.Fatalf("expected migrated link to authenticate bob, got %q", migratedBody.Viewer.PlayerID)
+	}
+
+	refreshJoin := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/join", map[string]any{
+		"migrationKey": migrationToken,
+	})
+	if refreshJoin.StatusCode != http.StatusOK {
+		t.Fatalf("expected migration token to survive refresh, got %d", refreshJoin.StatusCode)
+	}
+	refreshBody := decodeBody[RoomView](t, refreshJoin.Body)
+	if refreshBody.Viewer.PlayerID != bobBody.Viewer.PlayerID {
+		t.Fatalf("expected refreshed migrate link to authenticate bob, got %q", refreshBody.Viewer.PlayerID)
+	}
+
+	bobTriesAlice := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/migrate", map[string]any{
+		"playerId": migratedBody.CreatorID,
+	}, migratedJoin.Cookies()[0])
+	if bobTriesAlice.StatusCode != http.StatusForbidden {
+		t.Fatalf("expected non-moderator player migrate link to return 403, got %d", bobTriesAlice.StatusCode)
+	}
+}
+
+func TestDuplicateDisplayNamesGetStableRoomSuffixes(t *testing.T) {
+	t.Parallel()
+
+	testServer := newTestHTTPServer(t)
+	defer testServer.Close()
+
+	first := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/join", map[string]any{
+		"playerName":    "Alex",
+		"userAuthToken": "alex-one",
+	})
+	if first.StatusCode != http.StatusOK {
+		t.Fatalf("expected first join to return 200, got %d", first.StatusCode)
+	}
+	firstBody := decodeBody[RoomView](t, first.Body)
+
+	second := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/join", map[string]any{
+		"playerName":    "Alex",
+		"userAuthToken": "alex-two",
+	})
+	if second.StatusCode != http.StatusOK {
+		t.Fatalf("expected second join to return 200, got %d", second.StatusCode)
+	}
+	secondBody := decodeBody[RoomView](t, second.Body)
+
+	if secondBody.Players[firstBody.Viewer.PlayerID].DisplayName != "Alex" {
+		t.Fatalf("expected first Alex to remain unsuffixed, got %q", secondBody.Players[firstBody.Viewer.PlayerID].DisplayName)
+	}
+	if secondBody.Players[secondBody.Viewer.PlayerID].DisplayName != "Alex 2" {
+		t.Fatalf("expected second Alex to be suffixed, got %q", secondBody.Players[secondBody.Viewer.PlayerID].DisplayName)
+	}
+
+	rename := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/actions", map[string]any{
+		"type": "set_name",
+		"name": "Alex",
+	}, second.Cookies()[0])
+	if rename.StatusCode != http.StatusOK {
+		t.Fatalf("expected rename to return 200, got %d", rename.StatusCode)
+	}
+	renameBody := decodeBody[RoomView](t, rename.Body)
+	if renameBody.Players[secondBody.Viewer.PlayerID].DisplayName != "Alex 2" {
+		t.Fatalf("expected duplicate suffix to remain stable, got %q", renameBody.Players[secondBody.Viewer.PlayerID].DisplayName)
+	}
+}
+
 func TestModeratorCanSetWordpackDuringSetupAndMidGame(t *testing.T) {
 	t.Parallel()
 
@@ -196,6 +339,11 @@ func TestModeratorCanSetWordpackDuringSetupAndMidGame(t *testing.T) {
 	if start.StatusCode != http.StatusOK {
 		t.Fatalf("expected set_game_type to return 200, got %d", start.StatusCode)
 	}
+	startBody := decodeBody[RoomView](t, start.Body)
+	if startBody.CurrentPrompt == nil {
+		t.Fatalf("expected started round to persist current prompt")
+	}
+	startPrompt := *startBody.CurrentPrompt
 
 	lateSet := doJSONRequest(t, testServer, http.MethodPost, "/api/rooms/ROOM/actions", map[string]any{
 		"type":     "set_wordpack",
@@ -207,6 +355,9 @@ func TestModeratorCanSetWordpackDuringSetupAndMidGame(t *testing.T) {
 	lateSetBody := decodeBody[RoomView](t, lateSet.Body)
 	if lateSetBody.Wordpack != "English" {
 		t.Fatalf("expected mid-game wordpack change to English, got %q", lateSetBody.Wordpack)
+	}
+	if lateSetBody.CurrentPrompt == nil || *lateSetBody.CurrentPrompt != startPrompt {
+		t.Fatalf("expected wordpack change to preserve current prompt, got %#v want %#v", lateSetBody.CurrentPrompt, startPrompt)
 	}
 }
 
@@ -687,6 +838,15 @@ func decodeBody[T any](t *testing.T, body io.ReadCloser) T {
 		t.Fatalf("decode body: %v\npayload: %s", err, payload)
 	}
 	return decoded
+}
+
+func migrationTokenFromURL(t *testing.T, rawURL string) string {
+	t.Helper()
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		t.Fatalf("parse migration url: %v", err)
+	}
+	return parsed.Query().Get("migrate")
 }
 
 func osWriteFile(path string, data []byte) error {

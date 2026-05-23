@@ -18,6 +18,7 @@ export type RoomConnectionError = {
 export function useNetworkBackedGameState(args: {
   roomId: string;
   playerName: string;
+  userAuthToken: string;
   migrationKey?: string | null;
 }): [GameState | null, (action: RoomAction) => void, RoomConnectionError | null] {
   const [gameState, setGameState] = useState<GameState | null>(null);
@@ -42,6 +43,7 @@ export function useNetworkBackedGameState(args: {
     void joinRoom({
       roomId: args.roomId,
       playerName: args.playerName,
+      userAuthToken: args.userAuthToken,
       migrationKey: args.migrationKey,
     })
       .then((joinedState) => {
@@ -54,6 +56,7 @@ export function useNetworkBackedGameState(args: {
 
         unsubscribe = subscribeToRoom(
           args.roomId,
+          { userAuthToken: args.userAuthToken, migrationKey: args.migrationKey },
           (nextGameState) => {
             if (!isDisposed) {
               setGameState(normalizeGameStatePayload(nextGameState));
@@ -90,12 +93,15 @@ export function useNetworkBackedGameState(args: {
       isDisposed = true;
       unsubscribe();
     };
-  }, [args.migrationKey, args.playerName, args.roomId]);
+  }, [args.migrationKey, args.playerName, args.roomId, args.userAuthToken]);
 
   return [
     gameState,
     (action: RoomAction) => {
-      void postRoomAction(args.roomId, action)
+      void postRoomAction(args.roomId, action, {
+        userAuthToken: args.userAuthToken,
+        migrationKey: args.migrationKey,
+      })
         .then((savedGameState) => {
           setGameState(normalizeGameStatePayload(savedGameState));
           setConnectionError(null);

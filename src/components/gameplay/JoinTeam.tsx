@@ -54,14 +54,14 @@ export function JoinTeam() {
       <CenteredRow style={{ alignItems: "stretch", width: "100%", gap: 12, flexWrap: "wrap" }}>
         <TeamPane
           title={TeamName(Team.Left, t)}
-          members={leftTeam.map((playerId) => gameState.players[playerId].name)}
+          members={leftTeam.map((playerId) => gameState.players[playerId].displayName ?? gameState.players[playerId].name)}
           buttonText={t("jointeam.join_left")}
           onJoin={() => joinTeam(Team.Left)}
           disabled={!gameState.viewer.canChangeTeam || localPlayer.isObserver}
         />
         <TeamPane
           title={TeamName(Team.Right, t)}
-          members={rightTeam.map((playerId) => gameState.players[playerId].name)}
+          members={rightTeam.map((playerId) => gameState.players[playerId].displayName ?? gameState.players[playerId].name)}
           buttonText={t("jointeam.join_right")}
           onJoin={() => joinTeam(Team.Right)}
           disabled={!gameState.viewer.canChangeTeam || localPlayer.isObserver}

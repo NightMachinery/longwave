@@ -34,6 +34,26 @@ describe("BuildGameModel", () => {
     expect(persianModel.spectrumCard.right.text).toBe("سرد");
   });
 
+  it("uses persisted prompt cards before deriving from wordpacks", () => {
+    const gameState = {
+      ...InitialGameState(),
+      currentPrompt: card("Saved", "Prompt"),
+      previousTurn: {
+        deckIndex: 0,
+        clueAuthorName: "Psychic",
+        clues: [],
+        prompt: card("Previous", "Prompt"),
+        spectrumTarget: 10,
+        guess: 10,
+      },
+    };
+
+    const model = BuildGameModel(gameState, noop, [card("Hot", "Cold")], noop);
+
+    expect(model.spectrumCard.left.text).toBe("Saved");
+    expect(model.previousSpectrumCard?.left.text).toBe("Previous");
+  });
+
   it("uses the current wordpack cards for previous turns with the same deck seed", () => {
     const gameState = {
       ...InitialGameState(),

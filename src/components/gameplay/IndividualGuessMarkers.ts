@@ -12,7 +12,7 @@ export function buildIndividualGuessMarkers(
     })
     .map((playerId) => ({
       playerId,
-      name: players[playerId].name,
+      name: players[playerId].displayName ?? players[playerId].name,
       value: guesses[playerId],
       color: playerMarkerColor(playerId),
     }));

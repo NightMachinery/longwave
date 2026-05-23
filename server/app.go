@@ -23,6 +23,8 @@ const (
 	defaultCleanupInterval = time.Hour
 	maxBodySize            = 1 << 20
 	sessionCookieName      = "longwave_session"
+	userAuthHeaderName     = "X-Longwave-User-Auth"
+	roomAuthHeaderName     = "X-Longwave-Room-Auth"
 )
 
 type Config struct {
@@ -46,9 +48,14 @@ type App struct {
 }
 
 type joinRequest struct {
-	PlayerName   string `json:"playerName"`
-	MigrationKey string `json:"migrationKey"`
-	DeckLanguage string `json:"deckLanguage"`
+	PlayerName    string `json:"playerName"`
+	MigrationKey  string `json:"migrationKey"`
+	UserAuthToken string `json:"userAuthToken"`
+	DeckLanguage  string `json:"deckLanguage"`
+}
+
+type migrateRequest struct {
+	PlayerID string `json:"playerId,omitempty"`
 }
 
 type migrateResponse struct {
@@ -211,6 +218,8 @@ func (app *App) handleJoinRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sessionSecret := readSessionCookie(r)
+	userAuthHash := hashAuthToken(firstNonEmpty(request.UserAuthToken, r.Header.Get(userAuthHeaderName)))
+	migrationHash := hashAuthToken(request.MigrationKey)
 	if requestedRoom, found, err := app.store.LoadRoom(r.Context(), roomID, false); err != nil {
 		writeJSONError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -227,12 +236,10 @@ func (app *App) handleJoinRoom(w http.ResponseWriter, r *http.Request) {
 			})
 			return
 		}
-		if playerID, ok := authenticatedPlayer(&targetRoom, sessionSecret); ok {
+		if playerID, ok := authenticatedPlayer(&targetRoom, sessionSecret, userAuthHash, migrationHash); ok {
 			updatedRoom, err := app.store.UpdateRoom(r.Context(), requestedRoom.RedirectRoomID, func(room *RoomState, _ bool) error {
-				player := room.Players[playerID]
 				if strings.TrimSpace(request.PlayerName) != "" {
-					player.Name = strings.TrimSpace(request.PlayerName)
-					room.Players[playerID] = player
+					assignPlayerName(room, playerID, request.PlayerName)
 				}
 				return nil
 			})
@@ -261,22 +268,27 @@ func (app *App) handleJoinRoom(w http.ResponseWriter, r *http.Request) {
 		if room.MigrationTokens == nil {
 			room.MigrationTokens = map[string]string{}
 		}
-		if playerID, ok := authenticatedPlayer(room, sessionSecret); ok {
+		if playerID, ok := authenticatedPlayer(room, sessionSecret, userAuthHash, migrationHash); ok {
 			joinedPlayerID = playerID
 			player := room.Players[playerID]
-			if strings.TrimSpace(request.PlayerName) != "" {
-				player.Name = strings.TrimSpace(request.PlayerName)
+			if userAuthHash != "" && player.UserAuthHash == "" {
+				player.UserAuthHash = userAuthHash
 				room.Players[playerID] = player
+			}
+			if strings.TrimSpace(request.PlayerName) != "" {
+				assignPlayerName(room, playerID, request.PlayerName)
 			}
 			return nil
 		}
-		if request.MigrationKey != "" {
-			if migratedPlayerID, ok := room.MigrationTokens[request.MigrationKey]; ok {
+		if migrationHash != "" {
+			if migratedPlayerID, ok := room.MigrationTokens[migrationHash]; ok {
 				joinedPlayerID = migratedPlayerID
 				player := room.Players[migratedPlayerID]
 				player.SessionSecret = randomToken(16)
+				if userAuthHash != "" && player.UserAuthHash == "" {
+					player.UserAuthHash = userAuthHash
+				}
 				room.Players[migratedPlayerID] = player
-				delete(room.MigrationTokens, request.MigrationKey)
 				return nil
 			}
 		}
@@ -290,7 +302,9 @@ func (app *App) handleJoinRoom(w http.ResponseWriter, r *http.Request) {
 			Team:          TeamUnset,
 			IsModerator:   room.CreatorID == "",
 			SessionSecret: randomToken(16),
+			UserAuthHash:  userAuthHash,
 		}
+		assignPlayerName(room, joinedPlayerID, playerName)
 		assignNewPlayerToBalancedTeam(room, joinedPlayerID)
 		if room.CreatorID == "" {
 			room.CreatorID = joinedPlayerID
@@ -309,6 +323,11 @@ func (app *App) handleJoinRoom(w http.ResponseWriter, r *http.Request) {
 
 func (app *App) handleMigrateRoom(w http.ResponseWriter, r *http.Request) {
 	roomID := strings.TrimSpace(r.PathValue("roomID"))
+	var request migrateRequest
+	if err := decodeOptionalJSONBody(r, &request); err != nil {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	result, err := app.authenticatedRoom(r.Context(), roomID, r)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, err.Error())
@@ -325,25 +344,35 @@ func (app *App) handleMigrateRoom(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 		return
 	}
-	room, err := app.store.UpdateRoom(r.Context(), result.canonicalRoomID, func(current *RoomState, _ bool) error {
-		token := randomToken(16)
+	targetPlayerID := strings.TrimSpace(request.PlayerID)
+	if targetPlayerID == "" {
+		targetPlayerID = result.playerID
+	}
+	rawToken := randomToken(16)
+	_, err = app.store.UpdateRoom(r.Context(), result.canonicalRoomID, func(current *RoomState, _ bool) error {
+		if _, ok := current.Players[targetPlayerID]; !ok {
+			return fmt.Errorf("player not found")
+		}
+		if targetPlayerID != result.playerID && !canManageRoom(current, result.playerID) {
+			return errUnauthorized
+		}
 		if current.MigrationTokens == nil {
 			current.MigrationTokens = map[string]string{}
 		}
-		current.MigrationTokens[token] = result.playerID
+		current.MigrationTokens[hashAuthToken(rawToken)] = targetPlayerID
 		return nil
 	})
 	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, err.Error())
+		status := http.StatusInternalServerError
+		if errors.Is(err, errUnauthorized) {
+			status = http.StatusForbidden
+		} else if strings.Contains(err.Error(), "not found") {
+			status = http.StatusBadRequest
+		}
+		writeJSONError(w, status, err.Error())
 		return
 	}
-	var token string
-	for migrationToken, migrationPlayerID := range room.MigrationTokens {
-		if migrationPlayerID == result.playerID {
-			token = migrationToken
-		}
-	}
-	writeJSONResponseValue(w, http.StatusOK, migrateResponse{URL: buildMigrationURL(r, result.canonicalRoomID, token)})
+	writeJSONResponseValue(w, http.StatusOK, migrateResponse{URL: buildMigrationURL(r, result.canonicalRoomID, rawToken)})
 }
 
 func (app *App) handleGetRoom(w http.ResponseWriter, r *http.Request) {
@@ -506,6 +535,9 @@ func (app *App) handleRoomEvents(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *App) authenticatedRoom(ctx context.Context, roomID string, r *http.Request) (authenticatedRoomResult, error) {
+	sessionSecret := readSessionCookie(r)
+	userAuthHash := hashAuthToken(r.Header.Get(userAuthHeaderName))
+	roomAuthHash := hashAuthToken(firstNonEmpty(r.Header.Get(roomAuthHeaderName), r.URL.Query().Get("migrate")))
 	room, found, err := app.store.LoadRoom(ctx, roomID, true)
 	if err != nil {
 		return authenticatedRoomResult{}, err
@@ -521,7 +553,7 @@ func (app *App) authenticatedRoom(ctx context.Context, roomID string, r *http.Re
 		if !redirectedFound {
 			return authenticatedRoomResult{stale: true, canonicalRoomID: room.RedirectRoomID}, nil
 		}
-		playerID, ok := authenticatedPlayer(&redirectedRoom, readSessionCookie(r))
+		playerID, ok := authenticatedPlayer(&redirectedRoom, sessionSecret, userAuthHash, roomAuthHash)
 		if !ok {
 			return authenticatedRoomResult{stale: true, canonicalRoomID: room.RedirectRoomID}, nil
 		}
@@ -532,7 +564,7 @@ func (app *App) authenticatedRoom(ctx context.Context, roomID string, r *http.Re
 			canonicalRoomID: room.RedirectRoomID,
 		}, nil
 	}
-	playerID, ok := authenticatedPlayer(&room, readSessionCookie(r))
+	playerID, ok := authenticatedPlayer(&room, sessionSecret, userAuthHash, roomAuthHash)
 	return authenticatedRoomResult{
 		room:            room,
 		playerID:        playerID,
@@ -541,13 +573,26 @@ func (app *App) authenticatedRoom(ctx context.Context, roomID string, r *http.Re
 	}, nil
 }
 
-func authenticatedPlayer(room *RoomState, sessionSecret string) (string, bool) {
-	if sessionSecret == "" {
-		return "", false
+func authenticatedPlayer(room *RoomState, sessionSecret string, userAuthHash string, roomAuthHash string) (string, bool) {
+	if roomAuthHash != "" {
+		if playerID, ok := room.MigrationTokens[roomAuthHash]; ok {
+			if _, exists := room.Players[playerID]; exists {
+				return playerID, true
+			}
+		}
 	}
-	for playerID, player := range room.Players {
-		if player.SessionSecret == sessionSecret {
-			return playerID, true
+	if userAuthHash != "" {
+		for playerID, player := range room.Players {
+			if player.UserAuthHash == userAuthHash {
+				return playerID, true
+			}
+		}
+	}
+	if sessionSecret != "" {
+		for playerID, player := range room.Players {
+			if player.SessionSecret == sessionSecret {
+				return playerID, true
+			}
 		}
 	}
 	return "", false
@@ -575,6 +620,22 @@ func decodeJSONBody(r *http.Request, target any) error {
 	bodyReader := io.LimitReader(r.Body, maxBodySize)
 	defer r.Body.Close()
 	if err := json.NewDecoder(bodyReader).Decode(target); err != nil {
+		return fmt.Errorf("request body must be valid JSON")
+	}
+	return nil
+}
+
+func decodeOptionalJSONBody(r *http.Request, target any) error {
+	if r.Body == nil || r.ContentLength == 0 {
+		return nil
+	}
+	bodyReader := io.LimitReader(r.Body, maxBodySize)
+	defer r.Body.Close()
+	decoder := json.NewDecoder(bodyReader)
+	if err := decoder.Decode(target); err != nil {
+		if errors.Is(err, io.EOF) {
+			return nil
+		}
 		return fmt.Errorf("request body must be valid JSON")
 	}
 	return nil
